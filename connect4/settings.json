@@ -1,0 +1,24 @@
+{
+    "delta_genome_threshold": 1.5,
+    "distance_weights": {
+        "edge": 1.0,
+        "weight": 1.0,
+        "bias": 1.0
+    },
+    "activation": "sigmoid",
+    "max_fitness": Infinity,
+    "max_generations": Infinity,
+    "max_fitness_history": 30,
+    "breed_probabilities": {
+        "asexual": 0.5,
+        "sexual": 0.5
+    },
+    "mutation_probabilities": {
+        "node": 0.01,
+        "edge": 0.09,
+        "weight_perturb": 0.4,
+        "weight_set": 0.1,
+        "bias_perturb": 0.3,
+        "bias_set": 0.1
+    }
+}
