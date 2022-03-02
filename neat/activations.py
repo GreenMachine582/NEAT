@@ -41,7 +41,7 @@ def swish(x):
     return x * sigmoid(x)
 
 
-def get_activation(activation=''):
+def getActivation(activation=''):
     activations = {'absolute': absolute,
                    'binaryStep': binaryStep,
                    'clamped': clamped,
