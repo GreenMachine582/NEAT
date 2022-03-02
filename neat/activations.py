@@ -28,7 +28,7 @@ def tanh(x):
     return math.tanh(x)
 
 
-def LReLU(x):
+def leakyReLU(x):
     return x if x > 0 else 0.01 * x
 
 
@@ -48,7 +48,7 @@ def get_activation(activation=''):
                    'identity': identity,
                    'log': log,
                    'tanh': tanh,
-                   'LReLU': LReLU,
+                   'leakyReLU': leakyReLU,
                    'sigmoid': sigmoid,
                    'swish': swish}
     if activation in activations:
