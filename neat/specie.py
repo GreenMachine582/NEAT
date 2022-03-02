@@ -1,41 +1,57 @@
-import random
-import copy
 import math
+import random
+from copy import deepcopy
+
 from neat.genome import Genome
+from mattslib.list import mean, countOccurrence, sortIntoDict
+
+__file__ = 'specie'
+__version__ = '1.2'
+__date__ = '02/03/2022'
 
 
-def genomic_crossover(a, b):
-    child = Genome(a.inputs, a.outputs, a.default_activation)
-    a_in = set(a.connections)
-    b_in = set(b.connections)
+def genomic_crossover(x_member, y_member):
+    child = Genome(x_member.inputs, x_member.outputs, x_member.activation)
 
-    for i in a_in & b_in:
-        parent = random.choice([a, b])
-        child.connections[i] = copy.deepcopy(parent.connections[i])
+    x_connections = list(x_member.connections)
+    y_connections = list(y_member.connections)
+    connections = countOccurrence(x_connections + y_connections)
 
-    if a.fitness > b.fitness:
-        for i in a_in - b_in:
-            child.connections[i] = copy.deepcopy(a.connections[i])
+    matching_connections = [i for i in connections if connections[i] == 2]
+    disjoint_connections = [i for i in connections if connections[i] == 1]
+
+    for pos in matching_connections:
+        parent = random.choice([x_member, y_member])
+        child.connections[pos] = deepcopy(parent.connections[pos])
+
+    if x_member.fitness > y_member.fitness:
+        for pos in x_connections:
+            if pos in disjoint_connections:
+                child.connections[pos] = deepcopy(x_member.connections[pos])
     else:
-        for i in b_in - a_in:
-            child.connections[i] = copy.deepcopy(b.connections[i])
+        for pos in y_connections:
+            if pos in disjoint_connections:
+                child.connections[pos] = deepcopy(y_member.connections[pos])
 
-    child._max_node = 0
-    for (i, j) in child.connections:
-        current_max = max(i, j)
-        child._max_node = max(child.total_nodes, current_max)
+    child.total_nodes = 0
+    for pos in child.connections:
+        current_max = max(pos[0], pos[1])
+        child.total_nodes = max(child.total_nodes, current_max)
     child.total_nodes += 1
 
-    for n in range(child.total_nodes):
+    for node in range(child.total_nodes):
         inherit_from = []
-        if n in a.nodes:
-            inherit_from.append(a)
-        if n in b.nodes:
-            inherit_from.append(b)
+        if node in x_member.nodes:
+            inherit_from.append(x_member)
+        if node in y_member.nodes:
+            inherit_from.append(y_member)
 
         random.shuffle(inherit_from)
-        parent = max(inherit_from, key=lambda p: p.fitness)
-        child.nodes[n] = copy.deepcopy(parent.nodes[n])
+        parent, fitness = inherit_from[0], inherit_from[0].fitness
+        for member in inherit_from:
+            if member.fitness > fitness:
+                parent, fitness = member, member.fitness
+        child.nodes[node] = deepcopy(parent.nodes[node])
 
     child.reset()
     return child
@@ -45,48 +61,53 @@ class Specie(object):
     def __init__(self, max_fitness_history, *members):
         self.members = list(members)
         self.fitness_history = []
-        self.fitness_sum = 0
+        self.fitness_mean = 0
         self.max_fitness_history = max_fitness_history
 
     def breed(self, mutation_probabilities, breed_probabilities):
         population = list(breed_probabilities.keys())
-        probabilities = [breed_probabilities[k] for k in population]
-        choice = random.choices(population, weights=probabilities)[0]
+        probability_weights = [breed_probabilities[mutation] for mutation in population]
+        mutation = random.choices(population, weights=probability_weights)[0]
 
         child = None
-        if choice == "asexual" or len(self.members) == 1:
-            child = random.choice(self.members).clone()
+        if mutation == "asexual" or len(self.members) == 1:
+            child = deepcopy(random.choice(self.members))
             child.mutate(mutation_probabilities)
-        elif choice == "sexual":
-            (mom, dad) = random.sample(self.members, 2)
-            child = genomic_crossover(mom, dad)
-
+        elif mutation == "sexual":
+            (x_member, y_member) = random.sample(self.members, 2)
+            child = genomic_crossover(x_member, y_member)
         return child
 
-    def update_fitness(self):
-        """Update the adjusted fitness values of each genome
-        and the historical fitness."""
-        for g in self.members:
-            g._adjusted_fitness = g.fitness / len(self.members)
+    def updateFitness(self):
+        for member in self.members:
+            member.adjusted_fitness = member.fitness / len(self.members)
 
-        self.fitness_sum = sum([g._adjusted_fitness for g in self.members])
-        self.fitness_history.append(self.fitness_sum)
+        self.fitness_mean = mean(self.getAllFitnesses())
+        self.fitness_history.append(self.fitness_mean)
+
         if len(self.fitness_history) > self.max_fitness_history:
             self.fitness_history.pop(0)
 
-    def cull_genomes(self, fittest_only):
-        self.members.sort(key=lambda g: g.fitness, reverse=True)
-        if fittest_only:
-            remaining = 1
-        else:
-            remaining = int(math.ceil(0.25 * len(self.members)))
+    def killGenomes(self, preserve=0.25, elitism=False):
+        fitnesses = [genome.fitness for genome in self.members]
+        sorted_genomes = sortIntoDict(self.members, sort_with=fitnesses)
+        sorted_genomes = sum(sorted_genomes.values(), [])
 
-        self.members = self.members[:remaining]
+        survived = int(math.ceil(preserve * len(self.members))) if not elitism else 1
+        sorted_genomes = sorted_genomes[::-1]
+        self.members = sorted_genomes[:survived]
 
-    def get_best(self):
-        return max(self.members, key=lambda g: g.fitness)
+    def getBest(self):
+        best_genome = self.members[0]
+        for member in self.members:
+            if member.fitness > best_genome.fitness:
+                best_genome = member
+        return best_genome
 
-    def can_progress(self):
-        n = len(self.fitness_history)
-        avg = sum(self.fitness_history) / n
-        return avg > self.fitness_history[0] or n < self.max_fitness_history
+    def canProgress(self):
+        if len(self.fitness_history) < self.max_fitness_history or mean(self.fitness_history) > self.fitness_history[0]:
+            return True
+        return False
+
+    def getAllFitnesses(self):
+        return [member.fitness for member in self.members]
