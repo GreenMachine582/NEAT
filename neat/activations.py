@@ -1,6 +1,10 @@
 import math
 import random
 
+__file__ = 'activations'
+__version__ = '1.2'
+__date__ = '02/03/2022'
+
 
 def absolute(x):
     return abs(x)
