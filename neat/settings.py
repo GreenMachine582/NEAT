@@ -1,18 +1,22 @@
 import json
 
+__file__ = 'settings'
+__version__ = '1.2'
+__date__ = '02/03/2022'
+
 
 class Settings(object):
     def __init__(self, directory):
         self.delta_genome_threshold = 1.5
         self.distance_weights = {
-            'edge': 1.0,
+            'connection': 1.0,
             'weight': 1.0,
             'bias': 1.0
         }
         self.activation = 'sigmoid'
 
-        self.max_fitness = float('inf')
-        self.max_generations = float('inf')
+        self.max_fitness = 0
+        self.max_generations = 0
         self.max_fitness_history = 30
 
         self.breed_probabilities = {
@@ -20,8 +24,9 @@ class Settings(object):
             'sexual': 0.5
         }
         self.mutation_probabilities = {
+            'activation': 0.01,
             'node': 0.01,
-            'edge': 0.09,
+            'connection': 0.09,
             'weight_perturb': 0.4,
             'weight_set': 0.1,
             'bias_perturb': 0.3,
