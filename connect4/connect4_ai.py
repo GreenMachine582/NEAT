@@ -19,7 +19,7 @@ INFO_WIDTH, INFO_HEIGHT = NETWORK_WIDTH, HEIGHT - NETWORK_HEIGHT
 LPS = 90  # Loops per second
 FPS = 4  # Frames per second
 
-OVERWRITE = True
+OVERWRITE = False
 AI = True
 TRAIN = True
 DRAW_NETWORK = True
