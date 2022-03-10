@@ -5,11 +5,13 @@
         "weight": 1.0,
         "bias": 1.0
     },
-    "activations": [
-        "tanh"
-    ],
-    "max_depth": 5,
-    "max_backtrack": 1,
+    "node_info": {
+        "activations": [
+            "tanh"
+        ],
+        "max_depth": 5,
+        "max_backtrack": 1
+    },
     "max_fitness": 0,
     "max_generations": 0,
     "max_fitness_history": 30,
