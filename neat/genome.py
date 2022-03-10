@@ -6,7 +6,7 @@ from .activations import getActivation
 
 __file__ = 'genome'
 __version__ = '1.3'
-__date__ = '08/03/2022'
+__date__ = '10/03/2022'
 
 
 class Genome(object):
