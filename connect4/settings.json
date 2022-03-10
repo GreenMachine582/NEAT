@@ -5,7 +5,11 @@
         "weight": 1.0,
         "bias": 1.0
     },
-    "activation": "sigmoid",
+    "activations": [
+        "tanh"
+    ],
+    "max_depth": 5,
+    "max_backtrack": 1,
     "max_fitness": 0,
     "max_generations": 0,
     "max_fitness_history": 30,
@@ -15,8 +19,8 @@
     },
     "mutation_probabilities": {
         "activation": 0.01,
-        "node": 0.02,
-        "connection": 0.08,
+        "node": 0.01,
+        "connection": 0.09,
         "weight_perturb": 0.4,
         "weight_set": 0.1,
         "bias_perturb": 0.3,
