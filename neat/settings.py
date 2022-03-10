@@ -1,19 +1,21 @@
 import json
 
 __file__ = 'settings'
-__version__ = '1.2'
-__date__ = '02/03/2022'
+__version__ = '1.3'
+__date__ = '08/03/2022'
 
 
 class Settings(object):
     def __init__(self, directory):
-        self.delta_genome_threshold = 1.5
+        self.delta_genome_threshold = 0.75
         self.distance_weights = {
             'connection': 1.0,
             'weight': 1.0,
             'bias': 1.0
         }
-        self.activation = 'sigmoid'
+        self.activations = ['leakyReLU']
+        self.max_depth = 4
+        self.max_backtrack = 1
 
         self.max_fitness = 0
         self.max_generations = 0
@@ -32,7 +34,6 @@ class Settings(object):
             'bias_perturb': 0.3,
             'bias_set': 0.1
         }
-
         self.load(directory)
 
     def load(self, directory=''):
