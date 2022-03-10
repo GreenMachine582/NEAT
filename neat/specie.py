@@ -2,16 +2,16 @@ import math
 import random
 from copy import deepcopy
 
-from neat.genome import Genome
+from .genome import Genome
 from mattslib.list import mean, countOccurrence, sortIntoDict
 
 __file__ = 'specie'
-__version__ = '1.2'
-__date__ = '02/03/2022'
+__version__ = '1.3'
+__date__ = '10/03/2022'
 
 
 def genomic_crossover(x_member, y_member):
-    child = Genome(x_member.inputs, x_member.outputs, x_member.activation)
+    child = Genome(x_member.inputs, x_member.outputs, x_member.node_info)
 
     x_connections = list(x_member.connections)
     y_connections = list(y_member.connections)
