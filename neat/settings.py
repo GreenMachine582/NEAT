@@ -39,10 +39,10 @@ class Settings(object):
         self.load(directory)
 
     def load(self, directory=''):
-        with open(directory + 'settings.json') as f:
+        with open(directory + '\\settings.json') as f:
             settings = json.load(f)
             self.__dict__.update(settings)
 
     def save(self, directory=''):
-        with open(directory + 'settings.json', 'w') as f:
+        with open(directory + '\\settings.json', 'w') as f:
             json.dump(self.__dict__, f, indent=4)
