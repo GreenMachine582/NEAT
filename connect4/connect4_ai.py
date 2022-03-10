@@ -6,8 +6,7 @@ import random
 from neat import NEAT
 from mattslib import condense, findMaxMin
 
-__file__ = "connect4_ai"
-__version__ = '1.3'
+__version__ = '1.4'
 __date__ = '10/03/2022'
 
 # Constants
@@ -16,13 +15,13 @@ GAME_WIDTH, GAME_HEIGHT = HEIGHT, HEIGHT
 NETWORK_WIDTH, NETWORK_HEIGHT = WIDTH - GAME_WIDTH, HEIGHT * (3/4)
 INFO_WIDTH, INFO_HEIGHT = NETWORK_WIDTH, HEIGHT - NETWORK_HEIGHT
 
-LPS = 90  # Loops per second
-FPS = 4  # Frames per second
+RPS = 144  # Loops per second
+FPS = 40  # Frames per second
 
 OVERWRITE = False
 AI = True
 TRAIN = True
-DRAW_NETWORK = True
+DRAW = True
 
 # Colors
 BLACK = [0, 0, 0]
@@ -284,6 +283,7 @@ class Info:
 
 
 def main():
+    global DRAW
     pg.init()
 
     display = pg.display.set_mode((WIDTH, HEIGHT), depth=32)
@@ -303,7 +303,7 @@ def main():
             if os.path.isfile(f"{__file__}_{player}.neat") and not OVERWRITE:
                 neat_ai[player] = NEAT.load(f"{__file__}_{player}")
             else:
-                neat_ai[player] = NEAT()
+                neat_ai[player] = NEAT(DIRECTORY)
                 neat_ai[player].generate(connect4.ROWS * connect4.COLUMNS, connect4.COLUMNS, population=100)
 
     alive = True
@@ -312,7 +312,7 @@ def main():
         current_genome = None
         if AI:
             current_genome = neat_ai[connect4.current_player].getGenome()
-            if frame_count >= LPS:
+            if frame_count == 0:
                 network.generate(current_genome)
                 if connect4.current_player == 1:
                     info.update(neat_ai[connect4.current_player].getInfo())
@@ -326,6 +326,8 @@ def main():
                 if event.key == pg.K_ESCAPE:
                     run = False
                     break
+                elif event.key == pg.K_s:
+                    DRAW = not DRAW
                 if match and not AI:
                     if event.key == pg.K_r:
                         connect4.reset()
@@ -367,19 +369,20 @@ def main():
                 alive = False
                 match = False
 
-        if frame_count >= LPS:
-            display.fill(BLACK)
-            connect4.draw(game_display)
-            display.blit(game_display, (0, 0))
-            if DRAW_NETWORK:
+        if frame_count == 0:
+            if DRAW:
+                display.fill(BLACK)
+                connect4.draw(game_display)
                 network.draw(network_display)
                 info.draw(info_display)
+                display.blit(game_display, (0, 0))
                 display.blit(network_display, (GAME_WIDTH, 0))
                 display.blit(info_display, (GAME_WIDTH, NETWORK_HEIGHT))
+            # print(neat_ai[connect4.current_player].getInfo())
             pg.display.update()
 
-        frame_count = 0 if frame_count >= LPS else frame_count + FPS
-        clock.tick(LPS)
+        frame_count = 0 if frame_count >= RPS else frame_count + FPS
+        clock.tick(RPS)
 
         if not match and TRAIN and AI:
             if alive:
