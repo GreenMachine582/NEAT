@@ -2,7 +2,7 @@ import json
 
 __file__ = 'settings'
 __version__ = '1.3'
-__date__ = '08/03/2022'
+__date__ = '10/03/2022'
 
 
 class Settings(object):
@@ -13,9 +13,11 @@ class Settings(object):
             'weight': 1.0,
             'bias': 1.0
         }
-        self.activations = ['leakyReLU']
-        self.max_depth = 4
-        self.max_backtrack = 1
+        self.node_info = {
+            'activations': ['tanh'],
+            'max_depth': 5,
+            'max_backtrack': 1,
+        }
 
         self.max_fitness = 0
         self.max_generations = 0
