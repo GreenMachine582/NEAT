@@ -12,10 +12,11 @@ __date__ = '10/03/2022'
 class Genome(object):
     high, low = 1, -1
 
-    def __init__(self, inputs, outputs, activation):
+    def __init__(self, inputs, outputs, node_info):
         self.inputs = inputs
         self.outputs = outputs
-        self.activation = getActivation(activation)
+        self.activations = node_info['activations']
+        self.activation = getActivation(self.activations[0])
 
         self.initial_nodes = inputs + outputs
         self.total_nodes = inputs + outputs
@@ -26,8 +27,8 @@ class Genome(object):
         self.fitness = 0
         self.adjusted_fitness = 0
 
-        self.max_depth = 4
-        self.max_backtrack = 1
+        self.max_depth = node_info['max_depth']
+        self.max_backtrack = node_info['max_backtrack']
 
         self.generate()
 
@@ -56,13 +57,10 @@ class Genome(object):
             for i in nodes[j]:
                 node_sum += self.connections[(i, j)].weight * self.nodes[i].output
             node = self.nodes[j]
-            if isinstance(node.activation, str):
-                print('grr')
-                node.activation = getActivation(node.activation)
             node.output = node.activation(node_sum + node.bias)
         return [self.nodes[n].output for n in range(self.inputs, self.initial_nodes)]
 
-    def mutate(self, probabilities, activations):
+    def mutate(self, probabilities):
         self.addActiveConnection()
 
         population = list(probabilities.keys())
@@ -72,7 +70,7 @@ class Genome(object):
         random_number = ((self.high - self.low) * random.random() + self.low)
 
         if mutation == "activation":
-            self.activation = getActivation(random.choice(activations))
+            self.activation = getActivation(random.choice(self.activations))
         elif mutation == "node":
             self.addNode()
         elif mutation == "connection":
@@ -100,7 +98,7 @@ class Genome(object):
         else:
             # > limit backtrack. >= limit backtrack and side connection
             if self.nodes[pos[0]].depth >= self.nodes[pos[1]].depth:
-                if self.nodes[pos[0]].backtrack < 1:
+                if self.nodes[pos[0]].backtrack < self.max_backtrack:
                     self.nodes[pos[1]].backtrack += 1
                 else:
                     pos = pos[::-1]
@@ -115,7 +113,7 @@ class Genome(object):
         connection.active = False
 
         # depth = random.randint
-        depth = min(3, self.nodes[pos[0]].depth + 1)
+        depth = min(self.max_depth - 1, self.nodes[pos[0]].depth + 1)
 
         self.nodes[new_node].depth = depth
         self.total_nodes += 1
