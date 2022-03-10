@@ -15,6 +15,7 @@ class Genome(object):
     def __init__(self, inputs, outputs, node_info):
         self.inputs = inputs
         self.outputs = outputs
+        self.node_info = node_info
         self.activations = node_info['activations']
         self.activation = getActivation(self.activations[0])
 
