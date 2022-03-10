@@ -2,7 +2,7 @@ import logging
 
 __file__ = 'list'
 __version__ = '1.3'
-__date__ = '31/01/2022'
+__date__ = '10/03/2022'
 
 
 def condense(array, condensed_array=None, depth=0, max_depth=0):
@@ -76,3 +76,10 @@ def sortIntoDict(array, sort_with=None):
 
 def mean(array=None):
     return sum(array) / len(array)
+
+
+def medium(array=None):
+    array = sorted(array)
+    high = int(len(array)/2)
+    low = high - 1
+    return ((array[high] - array[low]) / 2) + array[low]
