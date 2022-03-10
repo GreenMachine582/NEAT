@@ -1,169 +1,189 @@
-from copy import deepcopy
-import pickle
+import random
 
-from neat.settings import Settings
-from neat.genome import Genome
-from neat.specie import Specie
-from neat import activations
-from mattslib.list import countOccurrence
+from .connection import Connection
+from .node import Node
+from .activations import getActivation
 
-__file__ = 'neat'
-__version__ = '1.2'
-__date__ = '02/03/2022'
+__file__ = 'genome'
+__version__ = '1.3'
+__date__ = '08/03/2022'
 
 
-def genomicDistance(x_member, y_member, distance_weights):
-    x_connections = list(x_member.connections)
-    y_connections = list(y_member.connections)
-    connections = countOccurrence(x_connections + y_connections)
+class Genome(object):
+    high, low = 1, -1
 
-    matching_connections = [i for i in connections if connections[i] >= 2]
-    disjoint_connections = [i for i in connections if connections[i] == 1]
-    count_connections = len(max(x_connections, y_connections))
-    count_nodes = min(x_member.total_nodes, y_member.total_nodes)
-
-    weight_diff = 0
-    for i in matching_connections:
-        weight_diff += abs(x_member.connections[i].weight - y_member.connections[i].weight)
-
-    bias_diff = 0
-    for i in range(count_nodes):
-        bias_diff += abs(x_member.nodes[i].bias - y_member.nodes[i].bias)
-
-    t1 = distance_weights['connection'] * (len(disjoint_connections) / count_connections)
-    t2 = distance_weights['weight'] * (weight_diff / len(matching_connections))
-    t3 = distance_weights['bias'] * (bias_diff / count_nodes)
-    return t1 + t2 + t3
-
-
-class NEAT(object):
-
-    def __init__(self, settings_dir=''):
-        self.settings = Settings(settings_dir)
-        self.inputs = 0
-        self.outputs = 0
-
-        self.species = []
-        self.population = 0
-
-        self.generation = 0
-        self.current_species = 0
-        self.current_genome = 0
-
-        self.best_genome = None
-
-    def generate(self, inputs, outputs, population=100):
+    def __init__(self, inputs, outputs, activation):
         self.inputs = inputs
         self.outputs = outputs
-        self.population = population
+        self.activation = getActivation(activation)
 
-        for _ in range(self.population):
-            genome = Genome(self.inputs, self.outputs, activations.getActivation(self.settings.activation))
-            self.classifyGenome(genome)
+        self.initial_nodes = inputs + outputs
+        self.total_nodes = inputs + outputs
 
-        self.best_genome = self.species[0].members[0]
+        self.connections = {}
+        self.nodes = {}
 
-    def classifyGenome(self, genome):
-        if not self.species:
-            self.species.append(Specie(self.settings.max_fitness_history, genome))
+        self.fitness = 0
+        self.adjusted_fitness = 0
+
+        self.max_depth = 4
+        self.max_backtrack = 1
+
+        self.generate()
+
+    def generate(self):
+        for n in range(self.total_nodes):
+            self.nodes[n] = Node(self.activation)
+            self.nodes[n].depth = 0 if self.getNodeType(n) == 'input' else self.max_depth
+
+        for i in range(self.inputs):
+            for j in range(self.inputs, self.initial_nodes):
+                self.addConnection((i, j), ((self.high - self.low) * random.random() + self.low))
+
+    def forward(self, inputs):
+        for i in range(self.inputs):
+            self.nodes[i].output = inputs[i]
+
+        nodes = {n: [] for n in range(self.total_nodes)}
+
+        for pos in self.connections:
+            if self.connections[pos].active:
+                nodes[pos[1]].append(pos[0])
+
+        genome_nodes = self.getNodes(['hidden', 'output'])
+        for j in genome_nodes['hidden'] + genome_nodes['output']:
+            node_sum = 0
+            for i in nodes[j]:
+                node_sum += self.connections[(i, j)].weight * self.nodes[i].output
+            node = self.nodes[j]
+            if isinstance(node.activation, str):
+                print('grr')
+                node.activation = getActivation(node.activation)
+            node.output = node.activation(node_sum + node.bias)
+        return [self.nodes[n].output for n in range(self.inputs, self.initial_nodes)]
+
+    def mutate(self, probabilities, activations):
+        self.addActiveConnection()
+
+        population = list(probabilities.keys())
+        probability_weights = [probabilities[mutation] for mutation in population]
+        mutation = random.choices(population, weights=probability_weights)[0]
+        nodes = self.getNodes()
+        random_number = ((self.high - self.low) * random.random() + self.low)
+
+        if mutation == "activation":
+            self.activation = getActivation(random.choice(activations))
+        elif mutation == "node":
+            self.addNode()
+        elif mutation == "connection":
+            self.addConnection(self.pair(nodes['input'], nodes['hidden'], nodes['output']), random_number)
+        elif mutation == "weight_perturb" or mutation == "weight_set":
+            self.shiftWeight(mutation, random_number)
+        elif mutation == "bias_perturb" or mutation == "bias_set":
+            self.shiftBias(mutation, random_number, nodes['hidden'] + nodes['output'])
+
+        self.reset()
+
+    def reset(self):
+        for node in range(self.total_nodes):
+            self.nodes[node].output = 0
+        self.fitness = 0
+
+    def addActiveConnection(self):
+        disabled_connections = [conn for conn in self.connections if not self.connections[conn].active]
+        if len(disabled_connections) == len(self.connections):
+            self.connections[random.choice(disabled_connections)].active = True
+
+    def addConnection(self, pos, weight):
+        if pos in self.connections:
+            self.connections[pos].active = True
         else:
-            for specie in self.species:
-                representative_of_specie = specie.members[0]
-                distance = genomicDistance(genome, representative_of_specie, self.settings.distance_weights)
-                if distance <= self.settings.delta_genome_threshold:
-                    specie.members.append(genome)
-                    return
-            self.species.append(Specie(self.settings.max_fitness_history, genome))
-
-    def updateFitness(self):
-        leading_genomes = [specie.getBest() for specie in self.species]
-        best_genome = leading_genomes[0]
-        for leading_genome in leading_genomes:
-            if leading_genome.fitness > best_genome.fitness:
-                best_genome = leading_genome
-        self.best_genome = deepcopy(best_genome)
-
-    def killPopulation(self):
-        surviving_species = []
-        for specie in self.species:
-            if specie.canProgress():
-                surviving_species.append(specie)
-        self.species = surviving_species
-
-        for specie in self.species:
-            specie.killGenomes()
-
-    def repopulate(self, fitness_sum):
-        if self.species:
-            for i, specie in enumerate(self.species):
-                offspring = int(round((specie.fitness_mean / fitness_sum) * (self.population - self.getPopulation())))
-                for j in range(offspring):
-                    self.classifyGenome(specie.breed(self.settings.mutation_probabilities,
-                                                     self.settings.breed_probabilities))
-        else:
-            for p in range(self.population):
-                if p % 3 == 0:
-                    genome = deepcopy(self.best_genome)
+            # > limit backtrack. >= limit backtrack and side connection
+            if self.nodes[pos[0]].depth >= self.nodes[pos[1]].depth:
+                if self.nodes[pos[0]].backtrack < 1:
+                    self.nodes[pos[1]].backtrack += 1
                 else:
-                    genome = Genome(self.inputs, self.outputs, self.settings.activation)
-                genome.mutate(self.settings.mutation_probabilities)
-                self.classifyGenome(genome)
+                    pos = pos[::-1]
+            self.connections[pos] = Connection(weight)
 
-    def evolve(self):
-        fitness_sum = 0
-        for specie in self.species:
-            specie.updateFitness()
-            fitness_sum += specie.fitness_mean
+    def addNode(self):
+        new_node = self.total_nodes
+        self.nodes[new_node] = Node(self.activation)
 
-        if fitness_sum == 0:
-            for specie in self.species:
-                for member in specie.members:
-                    member.mutate(self.settings.mutation_probabilities)
+        pos = random.choice(self.getActiveConnections())
+        connection = self.connections[pos]
+        connection.active = False
+
+        # depth = random.randint
+        depth = min(3, self.nodes[pos[0]].depth + 1)
+
+        self.nodes[new_node].depth = depth
+        self.total_nodes += 1
+        self.addConnection((pos[0], new_node), 1.0)
+        self.addConnection((new_node, pos[1]), connection.weight)
+
+    def pair(self, input_nodes, hidden_nodes, output_nodes):
+        node_a = random.choice(input_nodes + hidden_nodes)
+        join_to = [n for n in hidden_nodes + output_nodes if n != node_a]
+
+        if join_to:
+            node_b = random.choice(join_to)
         else:
-            self.killPopulation()
-            self.repopulate(fitness_sum)
-        self.generation += 1
+            node_b = self.total_nodes
+            self.addNode()
+        return node_a, node_b
 
-    def shouldEvolve(self):
-        self.updateFitness()
-        if self.settings.max_generations and self.generation >= self.settings.max_generations:
-            if self.settings.max_fitness and self.best_genome.fitness >= self.settings.max_fitness:
-                return False
-        return True
+    def shiftWeight(self, mutation, random_number):
+        connection = random.choice(list(self.connections.keys()))
+        if mutation == "weight_perturb":
+            self.connections[connection].weight += random_number
+        elif mutation == "weight_set":
+            self.connections[connection].weight = random_number
 
-    def nextGenome(self):
-        specie = self.species[self.current_species]
-        if self.current_genome < len(specie.members) - 1:
-            self.current_genome += 1
-        else:
-            if self.current_species < len(self.species) - 1:
-                self.current_species += 1
+    def shiftBias(self, mutation, random_number, bias_nodes):
+        node = random.choice(bias_nodes)
+        if mutation == "bias_perturb":
+            self.nodes[node].bias += random_number
+        elif mutation == "bias_set":
+            self.nodes[node].bias = random_number
+
+    def getNodes(self, node_types=None):
+        if node_types is None:
+            node_types = ['input', 'hidden', 'output']
+        node_keys = list(self.nodes.keys())
+        out_nodes = {}
+        if 'input' in node_types:
+            out_nodes['input'] = node_keys[:self.inputs]
+        if 'hidden' in node_types:
+            out_nodes['hidden'] = node_keys[self.initial_nodes:]
+        if 'output' in node_types:
+            out_nodes['output'] = node_keys[self.inputs:self.initial_nodes]
+        return out_nodes
+
+    def getNodesByDepth(self):
+        node_depths = {}
+        for node_key in self.nodes:
+            node = self.nodes[node_key]
+            if node.depth not in node_depths.keys():
+                node_depths[node.depth] = []
+            node_depths[node.depth].append(node_key)
+        return node_depths
+
+    def getNodeType(self, node_index):
+        node_keys = list(self.nodes.keys())
+        if node_index in (node_keys[:self.inputs]):
+            return 'input'
+        elif node_index in (node_keys[self.inputs: self.inputs + self.outputs]):
+            return 'output'
+        return 'hidden'
+
+    def getActiveConnections(self, only_active=True):
+        active_nodes, deactivated_nodes = [], []
+        for pos in self.connections:
+            if self.connections[pos].active:
+                active_nodes.append(pos)
             else:
-                self.evolve()
-                self.current_species = 0
-            self.current_genome = 0
-
-    def getCurrent(self):
-        return self.generation, self.best_genome.fitness
-
-    def getGenome(self, specie=None, genome=None):
-        specie = self.current_species if specie is None else specie
-        genome = self.current_genome if genome is None else genome
-        return self.species[specie].members[genome]
-
-    def getPopulation(self):
-        return sum([len(specie.members) for specie in self.species])
-
-    def getInfo(self):
-        neat_info = {'generation': self.generation+1, 'current_species': self.current_species+1,
-                     'current_genome': self.current_genome, 'fittest': self.best_genome.fitness}
-        return neat_info
-
-    def save(self, filename):
-        with open(filename+'.neat', 'wb') as _out:
-            pickle.dump(self, _out, pickle.HIGHEST_PROTOCOL)
-
-    @staticmethod
-    def load(filename):
-        with open(filename+'.neat', 'rb') as _in:
-            return pickle.load(_in)
+                deactivated_nodes.append(pos)
+        if not only_active:
+            return active_nodes, deactivated_nodes
+        return active_nodes
