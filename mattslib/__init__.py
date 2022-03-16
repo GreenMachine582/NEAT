@@ -1,2 +1,7 @@
-from mattslib.list import condense, findMaxMin
-__all__ = ['file', 'list', 'condense', 'findMaxMin']
+from .list import condense, findMaxMin
+from . import dict
+from . import file
+from . import pygame
+
+
+__all__ = ['dict', 'file', 'list', 'condense', 'findMaxMin']
