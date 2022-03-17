@@ -1,6 +1,6 @@
 
-__version__ = '1.1'
-__date__ = '16/03/2022'
+__version__ = '1.2'
+__date__ = '17/03/2022'
 
 import pygame as pg
 from .message import Message
@@ -76,10 +76,7 @@ class Button:
 
     def clicked(self):
         if self.handler is not None:
-            try:
-                return self.handler()
-            except Exception as e:
-                print(e)
+            return self.handler()
         return False
 
 
