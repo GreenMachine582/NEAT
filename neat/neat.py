@@ -1,15 +1,16 @@
+from __future__ import annotations
+
 from copy import deepcopy
 import pickle
 import random
 
-from .settings import Settings
 from .genome import Genome
+from .settings import Settings
 from .specie import Specie
-from mattslib.list import countOccurrence
+from mattslib.dict import countOccurrence
 
-__file__ = 'neat'
-__version__ = '1.3'
-__date__ = '08/03/2022'
+__version__ = '1.4.1'
+__date__ = '17/03/2022'
 
 
 def genomicDistance(x_member, y_member, distance_weights):
@@ -34,6 +35,53 @@ def genomicDistance(x_member, y_member, distance_weights):
     t2 = distance_weights['weight'] * (weight_diff / len(matching_connections))
     t3 = distance_weights['bias'] * (bias_diff / count_nodes)
     return t1 + t2 + t3
+
+
+def genomicCrossover(x_member, y_member):
+    child = Genome(x_member.inputs, x_member.outputs, x_member.node_info)
+
+    x_connections = list(x_member.connections)
+    y_connections = list(y_member.connections)
+    connections = countOccurrence(x_connections + y_connections)
+
+    matching_connections = [i for i in connections if connections[i] == 2]
+    disjoint_connections = [i for i in connections if connections[i] == 1]
+
+    for pos in matching_connections:
+        parent = random.choice([x_member, y_member])
+        child.connections[pos] = deepcopy(parent.connections[pos])
+
+    if x_member.fitness > y_member.fitness:
+        for pos in x_connections:
+            if pos in disjoint_connections:
+                child.connections[pos] = deepcopy(x_member.connections[pos])
+    else:
+        for pos in y_connections:
+            if pos in disjoint_connections:
+                child.connections[pos] = deepcopy(y_member.connections[pos])
+
+    child.total_nodes = 0
+    for pos in child.connections:
+        current_max = max(pos[0], pos[1])
+        child.total_nodes = max(child.total_nodes, current_max)
+    child.total_nodes += 1
+
+    for node in range(child.total_nodes):
+        inherit_from = []
+        if node in x_member.nodes:
+            inherit_from.append(x_member)
+        if node in y_member.nodes:
+            inherit_from.append(y_member)
+
+        random.shuffle(inherit_from)
+        parent, fitness = inherit_from[0], inherit_from[0].fitness
+        for member in inherit_from:
+            if member.fitness > fitness:
+                parent, fitness = member, member.fitness
+        child.nodes[node] = deepcopy(parent.nodes[node])
+
+    child.reset()
+    return child
 
 
 class NEAT(object):
@@ -83,23 +131,42 @@ class NEAT(object):
                 best_genome = leading_genome
         self.best_genome = deepcopy(best_genome)
 
+    def breed(self, probabilities, specie_key):
+        crossover_by = random.choices(list(probabilities['crossover'].keys()),
+                                      weights=list(probabilities['crossover'].values()))[0]
+        breed_by = random.choices(list(probabilities['breed'].keys()),
+                                  weights=list(probabilities['breed'].values()))[0]
+        x_member, y_member = None, None
+        if crossover_by == 'intraspecies' or breed_by == 'asexual':
+            if breed_by == "asexual" or len(self.species[specie_key].members) == 1:
+                child = deepcopy(random.choice(self.species[specie_key].members))
+                child.mutate(self.settings.mutation_probabilities)
+                return child
+            elif breed_by == 'sexual':
+                (x_member, y_member) = random.sample(self.species[specie_key].members, 2)
+        elif crossover_by == 'interspecies':
+            species = [i for i in range(len(self.species)) if i != specie_key]
+            x_member = random.choice(self.species[specie_key].members)
+            y_member = random.choice(self.species[random.choice(species)].members)
+        return genomicCrossover(x_member, y_member)
+
     def killPopulation(self):
         surviving_species = []
         for specie in self.species:
-            if specie.canProgress():
+            if specie.shouldSurvive():
                 surviving_species.append(specie)
         self.species = surviving_species
 
         for specie in self.species:
-            specie.killGenomes()
+            specie.killGenomes(self.settings.kill)
 
     def repopulate(self, fitness_sum):
         if self.species:
-            for i, specie in enumerate(self.species):
+            for specie_key, specie in enumerate(self.species):
                 offspring = int(round((specie.fitness_mean / fitness_sum) * (self.population - self.getPopulation())))
-                for j in range(offspring):
-                    self.classifyGenome(specie.breed(self.settings.mutation_probabilities,
-                                                     self.settings.breed_probabilities))
+                for _ in range(offspring):
+                    child = self.breed(self.settings.breed_probabilities, specie_key)
+                    self.classifyGenome(child)
         else:
             for p in range(self.population):
                 if p % 3 == 0:
@@ -156,7 +223,7 @@ class NEAT(object):
 
     def getInfo(self):
         neat_info = {'generation': self.generation+1, 'current_species': self.current_species+1,
-                     'current_genome': self.current_genome, 'fittest': self.best_genome.fitness}
+                     'current_genome': self.current_genome+1, 'fitness': self.getGenome().fitness}
         return neat_info
 
     def save(self, filename):
