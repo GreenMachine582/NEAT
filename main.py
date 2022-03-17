@@ -7,7 +7,7 @@ import mattslib as ml
 import mattslib.pygame as mlpg
 
 __version__ = '1.4'
-__date__ = '17/03/2022'
+__date__ = '18/03/2022'
 
 # Constants
 WIDTH, HEIGHT = 1120, 640
@@ -19,7 +19,7 @@ MENU_WIDTH, MENU_HEIGHT = ADDON_PANEL[0], NETWORK_HEIGHT - INFO_HEIGHT
 OPTION_WIDTH, OPTION_HEIGHT = WIDTH, HEIGHT
 
 FPS = 40
-MAX_FPS = 500
+MAX_FPS = 144
 
 OVERWRITE = True
 TRAIN = True
@@ -43,7 +43,7 @@ DARKER = [-65, -65, -65]
 # Globals - Defaults
 players = {1: {'type': PLAYER_TYPES[1]}, 2: {'type': PLAYER_TYPES[1]}}
 show_every = SHOW_EVERY[0]
-game_speed = SPEEDS[-1]
+game_speed = SPEEDS[0]
 evolution_speed = SPEEDS[-1]
 
 # Globals - Pygame
@@ -88,13 +88,16 @@ def setupAi(player_id, inputs, outputs=1):
     return neat
 
 
-def getSpeedShow(current_player):
-    if show_every == 'Generation' and\
-            current_player['neat'].current_species == current_player['neat'].current_genome == 0:
-        return game_speed, True
-    if show_every in ['Generation', 'None']:
+def getSpeedShow():
+    if show_every == 'Generation':
+        for player in [connect4.current_player, connect4.opponent]:
+            if players[player]['neat'].current_species == 0 and players[player]['neat'].current_genome == 0:
+                return game_speed, True
         return evolution_speed, False
-    return game_speed, True
+    elif show_every == 'None':
+        return evolution_speed, False
+    else:
+        return game_speed, True
 
 
 def setup():
@@ -114,7 +117,6 @@ def switch():
     temp = players[1]
     players[1] = players[2]
     players[2] = temp
-    connect4.reset()
 
 
 def close():
@@ -351,7 +353,7 @@ def main():
     run = True
     while run:
         current_player = players[connect4.current_player]
-        speed, show = getSpeedShow(current_player)
+        speed, show = getSpeedShow()
 
         possible_move = None
         mouse_clicked = False
@@ -421,9 +423,9 @@ def main():
                         connect4.switchPlayer()
 
         if not connect4.match:
-            if players[1]['type'] == PLAYER_TYPES[1] and players[2]['type'] == PLAYER_TYPES[1]:
-                switch()
             if frame_count >= MAX_FPS / speed:
+                if players[1]['type'] == PLAYER_TYPES[1] and players[2]['type'] == PLAYER_TYPES[1]:
+                    switch()
                 connect4.reset()
 
         menu.draw(menu_display)
