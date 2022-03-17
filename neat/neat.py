@@ -9,7 +9,7 @@ from .settings import Settings
 from .specie import Specie
 from mattslib.dict import countOccurrence
 
-__version__ = '1.4'
+__version__ = '1.4.1'
 __date__ = '17/03/2022'
 
 
