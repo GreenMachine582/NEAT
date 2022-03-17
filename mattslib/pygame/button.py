@@ -1,6 +1,6 @@
 
 __version__ = '1.2'
-__date__ = '17/03/2022'
+__date__ = '18/03/2022'
 
 import pygame as pg
 from .message import Message
@@ -73,9 +73,12 @@ class Button:
 
         if self.active and mouse_clicked:
             return self.clicked()
+        return None
 
     def clicked(self):
         if self.handler is not None:
+            if isinstance(self.handler, bool):
+                return self.handler
             return self.handler()
         return True
 
@@ -104,7 +107,8 @@ class ButtonGroup:
 
     def update(self, mouse_pos, mouse_clicked):
         for button_key in self.buttons:
-            if self.buttons[button_key].mouseOver(mouse_pos, mouse_clicked) is not None:
+            action = self.buttons[button_key].mouseOver(mouse_pos, mouse_clicked)
+            if action is not None:
                 if self.single_active:
                     self.button_states = [False for _ in range(len(self.buttons))]
                     self.button_states[button_key] = True
