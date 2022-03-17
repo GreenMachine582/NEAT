@@ -41,7 +41,6 @@ YELLOW = [255, 255, 0]
 DARKER = [-65, -65, -65]
 
 # Globals - Defaults
-new_game = True
 players = {1: {'type': PLAYER_TYPES[1]}, 2: {'type': PLAYER_TYPES[1]}}
 show_every = SHOW_EVERY[0]
 game_speed = SPEEDS[-1]
@@ -89,16 +88,13 @@ def setupAi(player_id, inputs, outputs=1):
     return neat
 
 
-def getSpeed(current_player, show):
-    speed = game_speed
-    if show_every == 'Generation' and current_player['neat'].current_species == 0 and\
-            current_player['neat'].current_genome == 0:
-        show = True
-    else:
-        if show_every == 'Generation':
-            show = False
-        speed = game_speed if game_speed > evolution_speed else evolution_speed
-    return speed, show
+def getSpeedShow(current_player):
+    if show_every == 'Generation' and\
+            current_player['neat'].current_species == current_player['neat'].current_genome == 0:
+        return game_speed, True
+    if show_every in ['Generation', 'None']:
+        return evolution_speed, False
+    return game_speed, True
 
 
 def setup():
@@ -253,7 +249,7 @@ class Options:
 
     def generate(self):
         self.buttons = {'back': mlpg.Button("Back", (OPTION_WIDTH * (2 / 5), OPTION_HEIGHT * (5 / 6)),
-                                            GREY, handler=main),
+                                            GREY),
                         'quit': mlpg.Button("QUIT", (OPTION_WIDTH * (3 / 5), OPTION_HEIGHT * (5 / 6)),
                                             GREY, handler=close)}
         self.messages = []
@@ -292,16 +288,17 @@ class Options:
                                                            self.BOARDER + (len(self.messages) * 90)), align='mr'))
 
     def update(self, mouse_pos, mouse_clicked):
-        global new_game, players, game_speed, evolution_speed, show_every
+        global players, game_speed, evolution_speed, show_every
         for button_key in self.buttons:
-            self.buttons[button_key].mouseOver(mouse_pos, mouse_clicked)
+            if self.buttons[button_key].mouseOver(mouse_pos, mouse_clicked):
+                return True
 
         for group in self.group_buttons:
             button_key = self.group_buttons[group].update(mouse_pos, mouse_clicked)
             if button_key is not None:
                 if group in ['player_1', 'player_2']:
-                    new_game = True
                     players[int(group[-1])]['type'] = PLAYER_TYPES[button_key]
+                    setup()
                 elif group == 'game_speed':
                     game_speed = SPEEDS[button_key]
                 elif group == 'evolution_speed':
@@ -319,8 +316,7 @@ class Options:
             self.buttons[button_keys].draw(window)
 
     def main(self):
-        global display, options_display, new_game
-        new_game = False
+        global display, options_display
         run, typing = True, False
         while run:
             mouse_clicked = False
@@ -336,7 +332,8 @@ class Options:
                         if event.key in [pg.K_1, pg.K_KP1]:
                             pass
             mouse_pos = pg.mouse.get_pos()
-            self.update(mouse_pos, mouse_clicked)
+            if self.update(mouse_pos, mouse_clicked) is not None:
+                return True
 
             self.draw(options_display)
             display.blit(options_display, (0, 0))
@@ -348,19 +345,13 @@ class Options:
 def main():
     global display, connect4, network, info, menu, options
 
-    if new_game:
-        setup()
+    setup()
 
     frame_count, speed, show = 1, game_speed, True
     run = True
     while run:
-        if not connect4.match:
-            if players[1]['type'] == PLAYER_TYPES[1] and players[2]['type'] == PLAYER_TYPES[1]:
-                switch()
-            if frame_count >= MAX_FPS / speed:
-                connect4.reset()
-
         current_player = players[connect4.current_player]
+        speed, show = getSpeedShow(current_player)
 
         possible_move = None
         mouse_clicked = False
@@ -393,12 +384,8 @@ def main():
         mouse_pos = pg.mouse.get_pos()
         menu.update(mouse_pos, mouse_clicked)
 
-        show = True if show_every != 'None' else False
-
         if connect4.match:
             if current_player['type'] == PLAYER_TYPES[1]:
-                speed, show = getSpeed(current_player, show)
-
                 if frame_count >= MAX_FPS / speed:
                     frame_count = 1
                     current_genome = current_player[PLAYER_TYPES[1]].getGenome()
@@ -429,8 +416,15 @@ def main():
                     result = connect4.makeMove(move)
                     if result not in [-2, -1]:
                         connect4.match = False
+                        frame_count = 1
                     else:
                         connect4.switchPlayer()
+
+        if not connect4.match:
+            if players[1]['type'] == PLAYER_TYPES[1] and players[2]['type'] == PLAYER_TYPES[1]:
+                switch()
+            if frame_count >= MAX_FPS / speed:
+                connect4.reset()
 
         menu.draw(menu_display)
         display.blit(menu_display, (GAME_PANEL[0], GAME_PANEL[1] - MENU_HEIGHT))
@@ -452,7 +446,4 @@ def main():
 
 
 if __name__ == '__main__':
-    try:
-        main()
-    except Exception as e:
-        print(e)
+    main()
