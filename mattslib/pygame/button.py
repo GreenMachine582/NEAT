@@ -77,7 +77,7 @@ class Button:
     def clicked(self):
         if self.handler is not None:
             return self.handler()
-        return False
+        return True
 
 
 class ButtonGroup:
