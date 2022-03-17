@@ -8,7 +8,7 @@ from .genome import Genome
 from mattslib.list import mean
 from mattslib.dict import countOccurrence, sortIntoDict
 
-__version__ = '1.4.1'
+__version__ = '1.4'
 __date__ = '17/03/2022'
 
 
