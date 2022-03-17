@@ -161,7 +161,7 @@ class NEAT(object):
                     specie.members.append(genome)
                     classified = True
         if not classified:
-            self.species.append(Specie(self.settings.max_fitness_history, genome))
+            self.species.append(Specie(self.settings.max_fitness_history, [genome]))
 
     def updateFitness(self) -> None:
         """
