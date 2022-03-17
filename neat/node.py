@@ -1,11 +1,20 @@
+from __future__ import annotations
 
-__file__ = 'node'
-__version__ = '1.3'
-__date__ = '08/03/2022'
+__version__ = '1.4.1'
+__date__ = '17/03/2022'
 
 
 class Node(object):
-    def __init__(self, activation):
+    """
+    Contains key information about the node.
+    """
+    def __init__(self, layer_type: str, activation: Any):
+        """
+        Initiates the Node object with default and given values.
+        :param layer_type: str
+        :param activation: (x: int | float) -> int | float
+        """
+        self.layer_type = layer_type
         self.activation = activation
         self.depth = 0
         self.output = 0
