@@ -7,7 +7,7 @@ import mattslib as ml
 import mattslib.pygame as mlpg
 
 __version__ = '1.4'
-__date__ = '16/03/2022'
+__date__ = '17/03/2022'
 
 # Constants
 WIDTH, HEIGHT = 1120, 640
@@ -21,7 +21,7 @@ OPTION_WIDTH, OPTION_HEIGHT = WIDTH, HEIGHT
 FPS = 40
 MAX_FPS = 500
 
-OVERWRITE = False
+OVERWRITE = True
 TRAIN = True
 
 GAME = 'connect4'
@@ -41,6 +41,7 @@ YELLOW = [255, 255, 0]
 DARKER = [-65, -65, -65]
 
 # Globals - Defaults
+new_game = True
 players = {1: {'type': PLAYER_TYPES[1]}, 2: {'type': PLAYER_TYPES[1]}}
 show_every = SHOW_EVERY[0]
 game_speed = SPEEDS[-1]
@@ -291,7 +292,7 @@ class Options:
                                                            self.BOARDER + (len(self.messages) * 90)), align='mr'))
 
     def update(self, mouse_pos, mouse_clicked):
-        global players, game_speed, evolution_speed, show_every
+        global new_game, players, game_speed, evolution_speed, show_every
         for button_key in self.buttons:
             self.buttons[button_key].mouseOver(mouse_pos, mouse_clicked)
 
@@ -299,6 +300,7 @@ class Options:
             button_key = self.group_buttons[group].update(mouse_pos, mouse_clicked)
             if button_key is not None:
                 if group in ['player_1', 'player_2']:
+                    new_game = True
                     players[int(group[-1])]['type'] = PLAYER_TYPES[button_key]
                 elif group == 'game_speed':
                     game_speed = SPEEDS[button_key]
@@ -317,7 +319,8 @@ class Options:
             self.buttons[button_keys].draw(window)
 
     def main(self):
-        global display, options_display
+        global display, options_display, new_game
+        new_game = False
         run, typing = True, False
         while run:
             mouse_clicked = False
@@ -344,7 +347,9 @@ class Options:
 
 def main():
     global display, connect4, network, info, menu, options
-    setup()
+
+    if new_game:
+        setup()
 
     frame_count, speed, show = 1, game_speed, True
     run = True
@@ -447,4 +452,7 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as e:
+        print(e)
