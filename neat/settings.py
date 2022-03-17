@@ -1,12 +1,23 @@
+from __future__ import annotations
+
 import json
 
-__file__ = 'settings'
-__version__ = '1.3'
-__date__ = '10/03/2022'
+__version__ = '1.4.1'
+__date__ = '17/03/2022'
 
 
 class Settings(object):
-    def __init__(self, directory):
+    """
+    Contains the default settings for NEAT, also has options
+     to save and load values.
+    """
+    def __init__(self, directory: str, load: bool = False):
+        """
+        Initiates the object with default values and loads required
+         settings from given file directory.
+        :param directory: str
+        :param load: bool
+        """
         self.delta_genome_threshold = 0.75
         self.distance_weights = {
             'connection': 1.0,
@@ -23,9 +34,13 @@ class Settings(object):
         self.max_generations = 0
         self.max_fitness_history = 30
 
+        self.kill = 0.7
+
         self.breed_probabilities = {
-            'asexual': 0.5,
-            'sexual': 0.5
+            'crossover': {'interspecies': 0.01,
+                          'intraspecies': 0.1},
+            'breed': {'asexual': 0.5,
+                      'sexual': 0.5}
         }
         self.mutation_probabilities = {
             'activation': 0.01,
@@ -36,13 +51,27 @@ class Settings(object):
             'bias_perturb': 0.3,
             'bias_set': 0.1
         }
-        self.load(directory)
 
-    def load(self, directory=''):
+        self.load(directory) if load else self.save(directory)
+
+    def load(self, directory='') -> None:
+        """
+        Loads the file and converts the json dict and updates
+         the class
+        :param directory: str
+        :return:
+            - None
+        """
         with open(directory + '\\settings.json') as f:
             settings = json.load(f)
             self.__dict__.update(settings)
 
-    def save(self, directory=''):
+    def save(self, directory='') -> None:
+        """
+        Converts the class information into a json writable.
+        :param directory: str
+        :return:
+            - None
+        """
         with open(directory + '\\settings.json', 'w') as f:
             json.dump(self.__dict__, f, indent=4)
