@@ -106,9 +106,9 @@ class Genome(object):
         elif mutation == "connection":
             self.addConnection(self.pair(node_types[self.LAYER_TYPES[0]], node_types[self.LAYER_TYPES[1]],
                                          node_types[self.LAYER_TYPES[2]]), random_number)
-        elif mutation == "weight_perturb" or mutation == "weight_set":
+        elif mutation in ["weight_perturb", "weight_set"]:
             self.adjustWeight(mutation, random_number)
-        elif mutation == "bias_perturb" or mutation == "bias_set":
+        elif mutation in ["bias_perturb", "bias_set"]:
             self.adjustBias(mutation, random_number, node_types[self.LAYER_TYPES[1]], node_types[self.LAYER_TYPES[2]])
 
         self.reset()
@@ -125,12 +125,12 @@ class Genome(object):
 
     def addActiveConnection(self) -> None:
         """
-        Adds an active connection if all connections are deactivated.
+        Activates one of the deactivated connections.
         :return:
             - None
         """
         deactivated_connections = [pos for pos in self.connections if not self.connections[pos].active]
-        if len(deactivated_connections) == len(self.connections):
+        if len(deactivated_connections) > 0:
             self.connections[random.choice(deactivated_connections)].active = True
 
     def addConnection(self, pos: tuple, weight: int | float) -> None:
