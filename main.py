@@ -84,7 +84,7 @@ def setupAi(player_id, inputs, outputs=1):
         neat = NEAT.load(f"{DIRECTORY}\\{GAME}\\ai_{player_id}")
     else:
         neat = NEAT(f"{DIRECTORY}\\{GAME}")
-        neat.generate(inputs, outputs, population=100)
+        neat.generate(inputs, outputs, population=50)
     return neat
 
 
@@ -152,7 +152,7 @@ class Network:
 
         for d, depth in enumerate(node_depths):
             for i, node_index in enumerate(node_depths[depth]):
-                node_type = current_genome.getNodeType(node_index)
+                node_type = current_genome.nodes[node_index].layer_type
                 i = 1 if len(node_depths[depth]) == 1 else i
                 pos = [int(self.BOARDER + width * (d / (len(node_depths) - 1))),
                        int(self.BOARDER + height * (i / max(len(node_depths[depth]) - 1, 2)))]
@@ -350,6 +350,8 @@ def main():
     run = True
     while run:
         if not connect4.match:
+            if players[1]['type'] == PLAYER_TYPES[1] and players[2]['type'] == PLAYER_TYPES[1]:
+                switch()
             if frame_count >= MAX_FPS / speed:
                 connect4.reset()
 
@@ -365,7 +367,7 @@ def main():
             if event.type == pg.KEYDOWN:
                 if event.key == pg.K_ESCAPE:
                     close()
-                if connect4.match and current_player['type'] == 'human':
+                if connect4.match and current_player['type'] == PLAYER_TYPES[0]:
                     if event.key in [pg.K_1, pg.K_KP1]:
                         possible_move = 0
                     elif event.key in [pg.K_2, pg.K_KP2]:
@@ -389,19 +391,19 @@ def main():
         show = True if show_every != 'None' else False
 
         if connect4.match:
-            if current_player['type'] == 'neat':
+            if current_player['type'] == PLAYER_TYPES[1]:
                 speed, show = getSpeed(current_player, show)
 
                 if frame_count >= MAX_FPS / speed:
                     frame_count = 1
-                    current_genome = current_player['neat'].getGenome()
+                    current_genome = current_player[PLAYER_TYPES[1]].getGenome()
                     if show:
                         network.generate(current_genome)
-                        info.update(current_player['neat'].getInfo())
+                        info.update(current_player[PLAYER_TYPES[1]].getInfo())
 
                     move = connect4.neatMove(current_genome)
 
-                    if not current_player['neat'].shouldEvolve() and TRAIN:
+                    if not current_player[PLAYER_TYPES[1]].shouldEvolve() and TRAIN:
                         close()
 
                     result = connect4.makeMove(move)
@@ -413,10 +415,10 @@ def main():
                     if not connect4.match and TRAIN:
                         current_genome.fitness = calculateFitness(result, connect4.current_player,
                                                                   connect4.opponent, connect4.turn)
-                        current_player['neat'].save(f"{DIRECTORY}\\{GAME}\\ai_{connect4.current_player}")
-                        current_player['neat'].nextGenome()
+                        current_player[PLAYER_TYPES[1]].save(f"{DIRECTORY}\\{GAME}\\ai_{connect4.current_player}")
+                        current_player[PLAYER_TYPES[1]].nextGenome()
 
-            elif current_player['type'] == 'human':
+            elif current_player['type'] == PLAYER_TYPES[0]:
                 if possible_move is not None:
                     move = connect4.getPossibleMove(possible_move)
                     result = connect4.makeMove(move)
@@ -428,7 +430,7 @@ def main():
         menu.draw(menu_display)
         display.blit(menu_display, (GAME_PANEL[0], GAME_PANEL[1] - MENU_HEIGHT))
 
-        if show or current_player['type'] == 'human':
+        if show or current_player['type'] == PLAYER_TYPES[0]:
             connect4.draw(game_display)
             network.draw(network_display)
             info.draw(info_display)
