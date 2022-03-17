@@ -11,7 +11,7 @@ class Settings(object):
     Contains the default settings for NEAT, also has options
      to save and load values.
     """
-    def __init__(self, directory: str, load: bool = False):
+    def __init__(self, directory: str, load: bool = True):
         """
         Initiates the object with default values and loads required
          settings from given file directory.
