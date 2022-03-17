@@ -251,7 +251,7 @@ class Options:
 
     def generate(self):
         self.buttons = {'back': mlpg.Button("Back", (OPTION_WIDTH * (2 / 5), OPTION_HEIGHT * (5 / 6)),
-                                            GREY),
+                                            GREY, handler=True),
                         'quit': mlpg.Button("QUIT", (OPTION_WIDTH * (3 / 5), OPTION_HEIGHT * (5 / 6)),
                                             GREY, handler=close)}
         self.messages = []
@@ -292,7 +292,8 @@ class Options:
     def update(self, mouse_pos, mouse_clicked):
         global players, game_speed, evolution_speed, show_every
         for button_key in self.buttons:
-            if self.buttons[button_key].mouseOver(mouse_pos, mouse_clicked):
+            action = self.buttons[button_key].mouseOver(mouse_pos, mouse_clicked)
+            if action is not None:
                 return True
 
         for group in self.group_buttons:
