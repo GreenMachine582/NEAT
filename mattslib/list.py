@@ -1,8 +1,7 @@
 import logging
 
-__file__ = 'list'
-__version__ = '1.3'
-__date__ = '10/03/2022'
+__version__ = '1.2.1'
+__date__ = '17/03/2022'
 
 
 def condense(array, condensed_array=None, depth=0, max_depth=0):
@@ -52,34 +51,5 @@ def findMaxMin(array=None):
         logging.exception(e)
 
 
-def countOccurrence(array=None):
-    try:
-        categories = {}
-        for n in array:
-            if n not in categories:
-                categories[n] = 1
-            else:
-                categories[n] += 1
-        return categories
-    except Exception as e:
-        logging.exception(e)
-
-
-def sortIntoDict(array, sort_with=None):
-    list_to_dict = {}
-    for key in range(len(sort_with)):
-        if sort_with[key] not in list_to_dict:
-            list_to_dict[sort_with[key]] = []
-        list_to_dict[sort_with[key]].append(array[key])
-    return list_to_dict
-
-
 def mean(array=None):
     return sum(array) / len(array)
-
-
-def medium(array=None):
-    array = sorted(array)
-    high = int(len(array)/2)
-    low = high - 1
-    return ((array[high] - array[low]) / 2) + array[low]

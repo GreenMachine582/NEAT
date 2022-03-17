@@ -1,7 +1,6 @@
 import json
 import logging
 
-__file__ = 'file'
 __version__ = '1.3'
 __date__ = '10/03/2022'
 
