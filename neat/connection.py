@@ -1,10 +1,17 @@
+from __future__ import annotations
 
-__file__ = 'connection'
-__version__ = '1.2'
-__date__ = '02/03/2022'
+__version__ = '1.4.1'
+__date__ = '17/03/2022'
 
 
 class Connection(object):
-    def __init__(self, weight):
+    """
+    Contains key information about the connection.
+    """
+    def __init__(self, weight: int | float):
+        """
+        Initiates the Connection object with default and given values.
+        :param weight: int | float
+        """
         self.weight = weight
         self.active = True
