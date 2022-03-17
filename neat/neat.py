@@ -189,8 +189,9 @@ class NEAT(object):
                                       weights=list(probabilities['crossover'].values()))[0]
         breed_by = random.choices(list(probabilities['breed'].keys()),
                                   weights=list(probabilities['breed'].values()))[0]
+
         x_member, y_member = None, None
-        if crossover_by == 'intraspecies' or breed_by == 'asexual':
+        if crossover_by == 'intraspecies' or breed_by == 'asexual' or len(self.species) < 2:
             if breed_by == "asexual" or len(self.species[specie_key].members) == 1:
                 child = deepcopy(random.choice(self.species[specie_key].members))
                 child.mutate(self.settings.mutation_probabilities)
@@ -200,8 +201,7 @@ class NEAT(object):
         elif crossover_by == 'interspecies':
             species = [i for i in range(len(self.species)) if i != specie_key]
             x_member = random.choice(self.species[specie_key].members)
-            a = self.species[random.choice(species)].members
-            y_member = random.choice(a)
+            y_member = random.choice(self.species[random.choice(species)].members)
         return genomicCrossover(x_member, y_member)
 
     def killPopulation(self) -> None:
