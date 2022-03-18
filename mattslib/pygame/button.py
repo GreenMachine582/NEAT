@@ -103,7 +103,8 @@ class ButtonGroup:
     def generate(self):
         for i, text in enumerate(self.texts):
             colour = self.active_colour if self.button_states[i] else self.colour
-            self.buttons[i] = Button(text, (self.pos[0] + (i*(self.PADDING + 100)), self.pos[1]), colour, align=self.align)
+            self.buttons[i] = Button(text, (self.pos[0] + (i * (self.PADDING + 100)), self.pos[1]), colour,
+                                     align=self.align)
 
     def update(self, mouse_pos, mouse_clicked):
         for button_key in self.buttons:
