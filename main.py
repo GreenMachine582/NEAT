@@ -6,7 +6,7 @@ from neat import NEAT
 import mattslib as ml
 import mattslib.pygame as mlpg
 
-__version__ = '1.4'
+__version__ = '1.5'
 __date__ = '18/03/2022'
 
 # Constants
@@ -42,8 +42,8 @@ DARKER = [-65, -65, -65]
 
 # Globals - Defaults
 players = {1: {'type': PLAYER_TYPES[1]}, 2: {'type': PLAYER_TYPES[1]}}
-show_every = SHOW_EVERY[0]
-game_speed = SPEEDS[0]
+show_every = SHOW_EVERY[1]
+game_speed = SPEEDS[-1]
 evolution_speed = SPEEDS[-1]
 
 # Globals - Pygame
@@ -410,8 +410,7 @@ def main():
                     if not connect4.match and TRAIN:
                         current_genome.fitness = calculateFitness(result, connect4.current_player,
                                                                   connect4.opponent, connect4.turn)
-                        current_player[PLAYER_TYPES[1]].save(f"{DIRECTORY}\\{GAME}\\ai_{connect4.current_player}")
-                        current_player[PLAYER_TYPES[1]].nextGenome()
+                        current_player[PLAYER_TYPES[1]].nextGenome(f"{DIRECTORY}\\{GAME}\\ai_{connect4.current_player}")
 
             elif current_player['type'] == PLAYER_TYPES[0]:
                 if possible_move is not None:
@@ -426,7 +425,8 @@ def main():
         if not connect4.match:
             if frame_count >= MAX_FPS / speed:
                 if players[1]['type'] == PLAYER_TYPES[1] and players[2]['type'] == PLAYER_TYPES[1]:
-                    switch()
+                    if current_player['neat'].generation > players[connect4.opponent].generation:
+                        switch()
                 connect4.reset()
 
         menu.draw(menu_display)
