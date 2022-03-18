@@ -170,7 +170,7 @@ class NEAT(object):
         :return:
             - None
         """
-        leading_genomes = [specie.getBest() for specie in self.species]
+        leading_genomes = [specie.getRepresentative() for specie in self.species]
         best_genome = leading_genomes[0]
         for leading_genome in leading_genomes:
             if leading_genome.fitness > best_genome.fitness:
