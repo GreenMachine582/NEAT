@@ -6,8 +6,8 @@ from .activations import getActivation
 from .connection import Connection
 from .node import Node
 
-__version__ = '1.4.1'
-__date__ = '17/03/2022'
+__version__ = '1.5.1'
+__date__ = '18/03/2022'
 
 
 class Genome(object):
@@ -144,8 +144,7 @@ class Genome(object):
         if pos in self.connections:
             self.connections[pos].active = True
         else:
-            # > limit backtrack. >= limit backtrack and side connection
-            if self.nodes[pos[0]].depth >= self.nodes[pos[1]].depth:
+            if self.nodes[pos[0]].depth > self.nodes[pos[1]].depth:
                 if self.nodes[pos[0]].backtrack < self.max_backtrack:
                     self.nodes[pos[1]].backtrack += 1
                 else:
