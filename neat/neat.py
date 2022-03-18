@@ -9,8 +9,8 @@ from .settings import Settings
 from .specie import Specie
 from mattslib.dict import countOccurrence
 
-__version__ = '1.4.1'
-__date__ = '17/03/2022'
+__version__ = '1.5.1'
+__date__ = '18/03/2022'
 
 
 def genomicDistance(x_member: Genome, y_member: Genome, distance_weights: dict) -> float:
@@ -275,11 +275,15 @@ class NEAT(object):
                 return False
         return True
 
-    def nextGenome(self) -> None:
+    def nextGenome(self, filename: str = '') -> None:
         """
-        Gets the next genome in population and updates counters.
+        Gets the next genome in population, updates counters and
+         saves models at certain intervals.
+        :param filename: str
         :return:
+            - None
         """
+        self.save(filename)
         specie = self.species[self.current_species]
         if self.current_genome < len(specie.members) - 1:
             self.current_genome += 1
@@ -287,6 +291,8 @@ class NEAT(object):
             if self.current_species < len(self.species) - 1:
                 self.current_species += 1
             else:
+                if self.generation + 1 in self.settings.save_intervals:
+                    self.save(f"{filename}_gen_{self.generation + 1}")
                 self.evolve()
                 self.current_species = 0
             self.current_genome = 0
