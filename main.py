@@ -425,7 +425,7 @@ def main():
         if not connect4.match:
             if frame_count >= MAX_FPS / speed:
                 if players[1]['type'] == PLAYER_TYPES[1] and players[2]['type'] == PLAYER_TYPES[1]:
-                    if current_player['neat'].generation > players[connect4.opponent].generation:
+                    if current_player['neat'].generation > players[connect4.opponent]['neat'].generation:
                         switch()
                 connect4.reset()
 
