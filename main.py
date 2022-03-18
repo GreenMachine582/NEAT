@@ -7,7 +7,7 @@ import mattslib as ml
 import mattslib.pygame as mlpg
 
 __version__ = '1.5'
-__date__ = '18/03/2022'
+__date__ = '19/03/2022'
 
 # Constants
 WIDTH, HEIGHT = 1120, 640
@@ -19,15 +19,11 @@ MENU_WIDTH, MENU_HEIGHT = ADDON_PANEL[0], NETWORK_HEIGHT - INFO_HEIGHT
 OPTION_WIDTH, OPTION_HEIGHT = WIDTH, HEIGHT
 
 FPS = 40
-MAX_FPS = 144
-
-OVERWRITE = True
-TRAIN = True
 
 GAME = 'connect4'
-PLAYER_TYPES = ['human', 'neat']
+PLAYER_TYPES = ['Human', 'NEAT', '1', '100', '1000']
 SHOW_EVERY = ['Genome', 'Generation', 'None']
-SPEEDS = [1, 5, 25, 100, MAX_FPS]
+SPEEDS = [1, 5, 25, 100, 500]
 DIRECTORY = os.path.dirname(os.path.realpath(__file__))
 
 # Colors
@@ -41,10 +37,12 @@ YELLOW = [255, 255, 0]
 DARKER = [-65, -65, -65]
 
 # Globals - Defaults
-players = {1: {'type': PLAYER_TYPES[1]}, 2: {'type': PLAYER_TYPES[1]}}
-show_every = SHOW_EVERY[1]
-game_speed = SPEEDS[-1]
+players = {1: PLAYER_TYPES[1], 2: PLAYER_TYPES[1]}
+neats = {1: None, 2: None}
+show_every = SHOW_EVERY[0]
+game_speed = SPEEDS[0]
 evolution_speed = SPEEDS[-1]
+max_fps = max(FPS, max(game_speed, evolution_speed))
 
 # Globals - Pygame
 os.environ['SDL_VIDEO_WINDOW_POS'] = "0,25"
@@ -67,31 +65,22 @@ menu = None
 options = None
 
 
-def calculateFitness(result, player, opponent, turn):
+def calculateFitness(result):
     fitness = 0
-    if result == player:
+    if result == connect4.current_player:
         fitness += 100
     elif result == 0:
         fitness += 25
-    elif result == opponent:
+    elif result == connect4.opponent:
         fitness -= 100
-    fitness -= turn
+    fitness -= connect4.turn
     return fitness
-
-
-def setupAi(player_id, inputs, outputs=1):
-    if os.path.isfile(f"{DIRECTORY}\\{GAME}\\ai_{player_id}.neat") and not OVERWRITE:
-        neat = NEAT.load(f"{DIRECTORY}\\{GAME}\\ai_{player_id}")
-    else:
-        neat = NEAT(f"{DIRECTORY}\\{GAME}")
-        neat.generate(inputs, outputs, population=50)
-    return neat
 
 
 def getSpeedShow():
     if show_every == 'Generation':
-        for player in [connect4.current_player, connect4.opponent]:
-            if players[player]['neat'].current_species == 0 and players[player]['neat'].current_genome == 0:
+        for player_id in [connect4.current_player, connect4.opponent]:
+            if neats[player_id].current_species == 0 and neats[player_id].current_genome == 0:
                 return game_speed, True
         return evolution_speed, False
     elif show_every == 'None':
@@ -100,23 +89,32 @@ def getSpeedShow():
         return game_speed, True
 
 
+def setupAi(player_id, inputs=4, outputs=1):
+    if players[player_id] == PLAYER_TYPES[1]:
+        if os.path.isfile(f"{DIRECTORY}\\{GAME}\\ai_{player_id}.neat"):
+            neat = NEAT.load(f"ai_{player_id}", f"{DIRECTORY}\\{GAME}")
+            return neat
+    else:
+        if os.path.isfile(f"{DIRECTORY}\\{GAME}\\ai_{player_id}_gen_{players[player_id]}.neat"):
+            neat = NEAT.load(f"ai_{player_id}_gen_{players[player_id]}", f"{DIRECTORY}\\{GAME}")
+            return neat
+    neat = NEAT(DIRECTORY, f"\\{GAME}")
+    neat.generate(inputs, outputs, population=50)
+    return neat
+
+
 def setup():
-    global connect4, network, info, menu, options, players
+    global connect4, network, info, menu, options, players, neats
     connect4 = Connect4()
     network = Network()
     info = Info()
     options = Options()
     menu = Menu()
     for player_id in players:
-        if players[player_id]['type'] == 'neat':
-            players[player_id]['neat'] = setupAi(player_id, connect4.LENGTH)
-
-
-def switch():
-    global connect4, players
-    temp = players[1]
-    players[1] = players[2]
-    players[2] = temp
+        if players[player_id] != PLAYER_TYPES[0]:
+            neats[player_id] = setupAi(player_id)
+        else:
+            neats[player_id] = None
 
 
 def close():
@@ -221,9 +219,8 @@ class Menu:
     def generate(self):
         self.buttons = [
             mlpg.Button("Reset", (MENU_WIDTH * (1 / 3), MENU_HEIGHT * (1 / 3)), GREY, handler=connect4.reset),
-            mlpg.Button("Options", (MENU_WIDTH * (2 / 3), MENU_HEIGHT * (1 / 3)), GREY,
-                        handler=options.main),
-            mlpg.Button("Switch", (MENU_WIDTH * (1 / 3), MENU_HEIGHT * (2 / 3)), GREY, handler=switch),
+            mlpg.Button("Options", (MENU_WIDTH * (2 / 3), MENU_HEIGHT * (1 / 3)), GREY, handler=options.main),
+            mlpg.Button("Switch", (MENU_WIDTH * (1 / 3), MENU_HEIGHT * (2 / 3)), GREY, handler=connect4.switchPlayer),
             mlpg.Button("QUIT", (MENU_WIDTH * (2 / 3), MENU_HEIGHT * (2 / 3)), GREY, handler=close)]
 
     def update(self, mouse_pos, mouse_clicked):
@@ -257,16 +254,15 @@ class Options:
         self.messages = []
 
         for player_key in players:
-            button_states = [True if players[player_key]['type'] == player_type else False
-                             for player_type in PLAYER_TYPES]
-            self.group_buttons[f"player_{player_key}"] = mlpg.ButtonGroup(['Human', 'NEAT'],
-                                                                          (
-                                                                          self.BOARDER + (OPTION_WIDTH * (1 / 6)) + 100,
-                                                                          self.BOARDER + (len(self.messages) * 90)),
+            button_states = [True if players[player_key] == player_type else False for player_type in PLAYER_TYPES]
+            self.group_buttons[f"player_{player_key}"] = mlpg.ButtonGroup(PLAYER_TYPES,
+                                                                          (self.BOARDER + (OPTION_WIDTH * (1 / 6))
+                                                                           + 100,
+                                                                           self.BOARDER + (len(self.messages) * 90)),
                                                                           GREY, GREEN, button_states=button_states)
-            self.messages.append(mlpg.Message(f"Player {player_key}:",
-                                              (self.BOARDER + (OPTION_WIDTH * (1 / 6)),
-                                               self.BOARDER + (len(self.messages) * 90)), align='mr'))
+            self.messages.append(mlpg.Message(f"Player {player_key}:", (self.BOARDER + (OPTION_WIDTH * (1 / 6)),
+                                                                        self.BOARDER + (len(self.messages) * 90)),
+                                              align='mr'))
 
         button_states = [True if speed == game_speed else False for speed in SPEEDS]
         self.group_buttons['game_speed'] = mlpg.ButtonGroup(SPEEDS, (self.BOARDER + (OPTION_WIDTH * (1 / 6)) + 100,
@@ -290,7 +286,8 @@ class Options:
                                                            self.BOARDER + (len(self.messages) * 90)), align='mr'))
 
     def update(self, mouse_pos, mouse_clicked):
-        global players, game_speed, evolution_speed, show_every
+        global players, game_speed, evolution_speed, max_fps, show_every
+        self.generate()
         for button_key in self.buttons:
             action = self.buttons[button_key].mouseOver(mouse_pos, mouse_clicked)
             if action is not None:
@@ -300,14 +297,26 @@ class Options:
             button_key = self.group_buttons[group].update(mouse_pos, mouse_clicked)
             if button_key is not None:
                 if group in ['player_1', 'player_2']:
-                    players[int(group[-1])]['type'] = PLAYER_TYPES[button_key]
+                    if button_key == 0:
+                        game_speed = SPEEDS[0]
+                        show_every = SHOW_EVERY[0]
+                    players[int(group[-1])] = PLAYER_TYPES[button_key]
+                    if button_key != 1:
+                        game_speed = SPEEDS[0]
+                        show_every = SHOW_EVERY[0]
                     setup()
                 elif group == 'game_speed':
                     game_speed = SPEEDS[button_key]
+                    if game_speed > evolution_speed:
+                        evolution_speed = game_speed
                 elif group == 'evolution_speed':
-                    evolution_speed = SPEEDS[button_key]
+                    evolution_speed = SPEEDS[button_key] if game_speed <= SPEEDS[button_key] else game_speed
                 elif group == 'show':
-                    show_every = SHOW_EVERY[button_key]
+                    show_every = SHOW_EVERY[0]
+                    if players[1] == players[2] == PLAYER_TYPES[1]:
+                        show_every = SHOW_EVERY[button_key]
+
+                max_fps = max(FPS, max(game_speed, evolution_speed))
 
     def draw(self, window):
         window.fill(self.colour['background'])
@@ -353,7 +362,7 @@ def main():
     frame_count, speed, show = 1, game_speed, True
     run = True
     while run:
-        current_player = players[connect4.current_player]
+        cp = connect4.current_player
         speed, show = getSpeedShow()
 
         possible_move = None
@@ -366,7 +375,7 @@ def main():
             if event.type == pg.KEYDOWN:
                 if event.key == pg.K_ESCAPE:
                     close()
-                if connect4.match and current_player['type'] == PLAYER_TYPES[0]:
+                if connect4.match and players[cp] == PLAYER_TYPES[0]:
                     if event.key in [pg.K_1, pg.K_KP1]:
                         possible_move = 0
                     elif event.key in [pg.K_2, pg.K_KP2]:
@@ -387,18 +396,19 @@ def main():
         mouse_pos = pg.mouse.get_pos()
         menu.update(mouse_pos, mouse_clicked)
 
+        result = None
         if connect4.match:
-            if current_player['type'] == PLAYER_TYPES[1]:
-                if frame_count >= MAX_FPS / speed:
+            if players[cp] != PLAYER_TYPES[0]:
+                if frame_count >= max_fps / speed:
                     frame_count = 1
-                    current_genome = current_player[PLAYER_TYPES[1]].getGenome()
-                    if show:
-                        network.generate(current_genome)
-                        info.update(current_player[PLAYER_TYPES[1]].getInfo())
+                    if players[cp] == PLAYER_TYPES[1]:
+                        current_genome = neats[cp].getGenome()
+                    else:
+                        current_genome = neats[cp].best_genome
 
                     move = connect4.neatMove(current_genome)
 
-                    if not current_player[PLAYER_TYPES[1]].shouldEvolve() and TRAIN:
+                    if not neats[cp].shouldEvolve() and players[cp] == PLAYER_TYPES[1]:
                         close()
 
                     result = connect4.makeMove(move)
@@ -407,12 +417,11 @@ def main():
                     else:
                         connect4.switchPlayer()
 
-                    if not connect4.match and TRAIN:
-                        current_genome.fitness = calculateFitness(result, connect4.current_player,
-                                                                  connect4.opponent, connect4.turn)
-                        current_player[PLAYER_TYPES[1]].nextGenome(f"{DIRECTORY}\\{GAME}\\ai_{connect4.current_player}")
+                    if show:
+                        network.generate(current_genome)
+                        info.update(neats[cp].getInfo())
 
-            elif current_player['type'] == PLAYER_TYPES[0]:
+            elif players[cp] == PLAYER_TYPES[0]:
                 if possible_move is not None:
                     move = connect4.getPossibleMove(possible_move)
                     result = connect4.makeMove(move)
@@ -423,16 +432,23 @@ def main():
                         connect4.switchPlayer()
 
         if not connect4.match:
-            if frame_count >= MAX_FPS / speed:
-                if players[1]['type'] == PLAYER_TYPES[1] and players[2]['type'] == PLAYER_TYPES[1]:
-                    if current_player['neat'].generation > players[connect4.opponent]['neat'].generation:
-                        switch()
+            if frame_count >= max_fps / speed:
+                for player_key in [connect4.current_player, connect4.opponent]:
+                    if players[player_key] == PLAYER_TYPES[1]:
+                        current_genome = neats[player_key].getGenome()
+                        current_genome.fitness = calculateFitness(result)
+                        neats[player_key].nextGenome(f"ai_{player_key}")
+                if players[1] == PLAYER_TYPES[1] and players[1] == PLAYER_TYPES[1]:
+                    if neats[1].generation > neats[2].generation:
+                        temp = neats[1]
+                        neats[1] = neats[2]
+                        neats[2] = temp
                 connect4.reset()
 
         menu.draw(menu_display)
         display.blit(menu_display, (GAME_PANEL[0], GAME_PANEL[1] - MENU_HEIGHT))
 
-        if show or current_player['type'] == PLAYER_TYPES[0]:
+        if show or players[cp] == PLAYER_TYPES[0]:
             connect4.draw(game_display)
             network.draw(network_display)
             info.draw(info_display)
@@ -442,7 +458,7 @@ def main():
         display.blit(info_display, (GAME_PANEL[0], NETWORK_HEIGHT))
 
         pg.display.update()
-        clock.tick(MAX_FPS)
+        clock.tick(max_fps)
         frame_count += 1
 
     close()
