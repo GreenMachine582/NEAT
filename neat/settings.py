@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import json
 
-__version__ = '1.4.1'
-__date__ = '17/03/2022'
+__version__ = '1.5.1'
+__date__ = '18/03/2022'
 
 
 class Settings(object):
@@ -18,6 +18,7 @@ class Settings(object):
         :param directory: str
         :param load: bool
         """
+        self.save_intervals = []
         self.delta_genome_threshold = 0.75
         self.distance_weights = {
             'connection': 1.0,
