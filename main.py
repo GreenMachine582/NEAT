@@ -438,11 +438,10 @@ def main():
                         current_genome = neats[player_key].getGenome()
                         current_genome.fitness = calculateFitness(result)
                         neats[player_key].nextGenome(f"ai_{player_key}")
-                if players[1] == PLAYER_TYPES[1] and players[1] == PLAYER_TYPES[1]:
-                    if neats[1].generation > neats[2].generation:
-                        temp = neats[1]
-                        neats[1] = neats[2]
-                        neats[2] = temp
+                if result != connect4.opponent:
+                    player_temp, neat_temp = players[1], neats[1]
+                    players[1], neats[1] = players[2], neats[2]
+                    players[2], neats[2] = player_temp, neat_temp
                 connect4.reset()
 
         menu.draw(menu_display)
