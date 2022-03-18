@@ -6,22 +6,35 @@ import random
 
 from .genome import Genome
 from mattslib.dict import countOccurrence, sortIntoDict
-from mattslib.list import mean
+from mattslib.math_util import mean
 
-__version__ = '1.4'
+__version__ = '1.5.1'
 __date__ = '18/03/2022'
 
 
 class Specie(object):
-    def __init__(self, max_fitness_history, *members):
-        # update
-        self.members = list(members)
+    """
+    Separates the population into species with similar genomic distance.
+    """
+    def __init__(self, max_fitness_history: int, members: list = None):
+        """
+        Initiates the Specie object with given values.
+        :param max_fitness_history: int
+        :param members: list
+        """
+        self.members = [] if members is None else members
+        self.representative = None
         self.fitness_history = []
         self.fitness_mean = 0
         self.max_fitness_history = max_fitness_history
 
     def updateFitness(self) -> None:
-        # update
+        """
+        Adjusts the fitness for the members and update the specie
+         fitness.
+        :return:
+            - None
+        """
         for member in self.members:
             member.adjusted_fitness = member.fitness / len(self.members)
 
@@ -39,25 +52,26 @@ class Specie(object):
         :return:
             - None
         """
-        sorted_genomes = sortIntoDict(self.members, sort_with=getAllFitnesses())
+        sorted_genomes = sortIntoDict(self.members, sort_with=self.getAllFitnesses())
         sorted_genomes = sum(sorted_genomes.values(), [])
 
         survived = int(math.ceil((1 - kill) * len(self.members))) if not elitism else 1
         sorted_genomes = sorted_genomes[::-1]
         self.members = sorted_genomes[:survived]
 
-    def getBest(self) -> Genome:
+    def getRepresentative(self) -> None:
         """
-        Searches through members in specie for member with highest
+        Searches through members in specie for leading representative
          fitness.
         :return:
-            - best_genome - Genome
+            - None
         """
-        best_genome = self.members[0]
+        representative = self.members[0]
         for member in self.members:
-            if member.fitness > best_genome.fitness:
-                best_genome = member
-        return best_genome
+            if member.fitness > representative.fitness:
+                representative = member
+        self.representative = representative
+        return representative
 
     def shouldSurvive(self) -> bool:
         """
