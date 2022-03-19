@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 
 __version__ = '1.2.1'
@@ -63,7 +65,7 @@ def removeKeys(array: dict = None, remove: Any = None) -> dict:
     Removes keys from array by given remove value.
     :param array: dict[Any: Any]
     :param remove: Any
-    :return: 
+    :return:
         - sorted_dict - dict[Any: Any]
     """
     if remove is None:
