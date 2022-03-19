@@ -1,4 +1,4 @@
-from .shape import Shape
+from . import shape
 from .button import Button, ButtonGroup
 from .message import Message
 
@@ -10,4 +10,4 @@ def changeColour(colour, change_by=-70):
     return new_colour
 
 
-__all__ = ['changeColour', 'Shape', 'Button', 'ButtonGroup', 'Message']
+__all__ = ['changeColour', 'shape', 'Button', 'ButtonGroup', 'Message']
