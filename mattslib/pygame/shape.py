@@ -26,12 +26,21 @@ class Rect:
 
         self.update()
 
-    def update(self) -> None:
+    def update(self, **kwargs) -> None:
         """
         Updates hotspot of rect.
         :return:
             - None
         """
+        if 'pos' in kwargs:
+            self.pos = kwargs['pos']
+        if 'align' in kwargs:
+            self.align = kwargs['align']
+        if 'dims' in kwargs:
+            self.dims = kwargs['dims']
+        if 'colour' in kwargs:
+            self.colour = kwargs['colour']
+
         if self.align == "ml":
             self.hotspot = (self.pos[0], (self.pos[1] - (self.dims[1]/2)))
         elif self.align == "mr":
