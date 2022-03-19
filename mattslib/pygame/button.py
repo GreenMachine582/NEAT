@@ -27,19 +27,17 @@ class Button:
     Button is an object that creates and draws interactive buttons for
     the user to use.
     """
-    def __init__(self, text: Any, pos: tuple, colour: list, handler: Any = None, align: str = '', dims: list = None):
+    def __init__(self, *args: Any, handler: Any = None, align: str = '', dims: list = None):
         """
         Initiates the Button object with given values.
-        :param text: Any
-        :param pos: tuple[int | float, int | float]
-        :param colour: list[int]
+        :param args: Any
         :param handler: Any
         :param align: str
         :param dims: list[int | float]
         """
-        self.text = text
-        self.pos = pos
-        self.colour = colour
+        self.text = args[0]
+        self.pos = args[1]
+        self.colour = args[2]
         self.handler = handler
         self.align = align
         self.dims = dims
@@ -53,18 +51,18 @@ class Button:
             height = 70 if self.message.text_rect[3] <= 60 else self.message.text_rect[3] + 20
             self.dims = [width, height]
 
-        self.button_rect = Rect(self.pos, self.align, self.dims, colour)
-        self.button_boarder = Rect(self.pos, self.align, self.dims, colour)
+        self.button_rect = Rect(self.pos, self.align, self.dims, self.colour)
+        self.button_boarder = Rect(self.pos, self.align, self.dims, self.colour)
 
         self.update()
 
-    def update(self, *args, **kwargs: Any) -> None:
+    def update(self, *args, **kwargs: Any) -> Any:
         """
         Updates the button and sets values.
         :param args: Any
         :param kwargs: Any
         :return:
-            - None
+            - handler - Any
         """
         if len(args) == 2:
             mouse_pos, mouse_clicked = args[0], args[1]
@@ -123,31 +121,45 @@ class Button:
 
 
 class ButtonGroup:
+    """
+    Forms a group of buttons, with active and selected states.
+    """
+
     PADDING = 40
 
-    def __init__(self, texts, pos, colour, active_colour, align='', dims=None, single_active=True, button_states=None):
-        self.texts = texts
-        self.pos = pos
-        self.colour = colour
-        self.active_colour = active_colour
+    def __init__(self, *args: Any, align: str = '', single_active: bool = True, button_states: list = None):
+        """
+        Initiates the button group with given values.
+        :param args: Any
+        :param align: str
+        :param single_active: bool
+        :param button_states: list[bool]
+        """
+        self.texts = args[0]
+        self.pos = args[1]
+        self.colour = args[2]
+        self.active_colour = args[3]
         self.align = align
-        self.dims = dims
 
         self.active = True
 
         self.single_active = single_active
         self.buttons = {}
         self.button_states = button_states if button_states is not None else [False for _ in range(len(self.texts))]
+        for i, text in enumerate(self.texts):
+            colour = self.active_colour if self.button_states[i] else self.colour
+            self.buttons[i] = Button(text, (self.pos[0] + (i * (self.PADDING + 100)), self.pos[1]), colour,
+                                     align=self.align)
 
         self.update()
 
-    def update(self, *args, **kwargs: Any) -> None:
+    def update(self, *args: Any, **kwargs: Any) -> int:
         """
         Updates the group of buttons and sets values.
         :param args: Any
         :param kwargs: Any
         :return:
-            - None
+            - button_key - int
         """
         if len(args) == 2:
             mouse_pos, mouse_clicked = args[0], args[1]
@@ -155,20 +167,25 @@ class ButtonGroup:
             mouse_pos, mouse_clicked = None, False
 
         origin = kwargs['origin'] if 'origin' in kwargs else (0, 0)
-        for i, text in enumerate(self.texts):
-            colour = self.active_colour if self.button_states[i] else self.colour
-            self.buttons[i] = Button(text, (self.pos[0] + (i * (self.PADDING + 100)), self.pos[1]), colour, align=self.align)
+
+        if 'colour' in kwargs:
+            self.colour = kwargs['colour']
+        if 'active_colour' in kwargs:
+            self.active_colour = kwargs['active_colour']
+        if 'button_states' in kwargs:
+            self.button_states = kwargs['button_states']
 
         if mouse_pos is not None:
             for button_key in self.buttons:
-                action = self.buttons[button_key].update(mouse_pos, mouse_clicked, origin=origin)
+                colour = self.active_colour if self.button_states[button_key] else self.colour
+                action = self.buttons[button_key].update(mouse_pos, mouse_clicked, origin=origin, colour=colour)
                 if action is not None:
                     if self.single_active:
                         self.button_states = [False for _ in range(len(self.buttons))]
                         self.button_states[button_key] = True
                         return button_key
 
-    def draw(self, surface) -> None:
+    def draw(self, surface: Any) -> None:
         """
         Draws the group of buttons.
         :param surface: Any
