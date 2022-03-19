@@ -1,49 +1,60 @@
+from __future__ import annotations
+
 import json
 import logging
+import pickle
 
-__version__ = '1.3'
-__date__ = '10/03/2022'
+__version__ = '1.3.1'
+__date__ = '19/03/2022'
 
 
-def read(file=""):
+def read(file_dir: str = '') -> Any | None:
+    """
+    Reads the given file and checks the extension to
+     determine a fit loading method.
+    :param file_dir: str
+    :return: 
+        - contents - Any | None
+    """
     try:
-        extension = file[-4:]
-        if "txt" in extension:
-            with open(file, "r") as f:
-                contents = f.readlines()
-        elif "json" in extension:
-            with open(file,) as f:
-                contents = json.load(f)
-        f.close()
+        if ".txt" in file_dir:
+            with open(file_dir, 'r') as file:
+                contents = file.readlines()
+        elif ".json" in file_dir:
+            with open(file_dir, 'r') as file:
+                contents = json.load(file)
+        else:
+            with open(file_dir, 'rb') as file:
+                contents = pickle.load(file)
         return contents
     except Exception as e:
         logging.exception(e)
     return None
 
 
-def write(contents=None, file=""):
+def write(contents: Any = None, file_dir: str = '') -> None:
+    """
+    Writes the contents to file and checks extension
+     to determine a fit writing method.
+    :param contents: Any
+    :param file_dir: str
+    :return: 
+        - None
+    """
     if contents is None:
         contents = []
     try:
-        with open(file, "w") as f:
-            if ".txt" in file:
-                f.writelines(contents)
-            elif ".json" in file:
+        if ".txt" in file_dir:
+            with open(file_dir, 'w') as file:
+                file.writelines(contents)
+        elif ".json" in file_dir:
+            with open(file_dir, 'w') as file:
                 if not isinstance(contents, dict):
-                    json.dump(contents.__dict__, f)
+                    json.dump(contents.__dict__, file)
                 else:
-                    json.dump(contents, f)
-        f.close()
-    except Exception as e:
-        logging.exception(e)
-
-
-def append(file="", contents=None):
-    if contents is None:
-        contents = []
-    try:
-        with open(file, "a") as f:
-            f.writelines(contents)
-        f.close()
+                    json.dump(contents, file)
+        else:
+            with open(file_dir, 'wb') as file:
+                pickle.dump(contents, file, pickle.HIGHEST_PROTOCOL)
     except Exception as e:
         logging.exception(e)
