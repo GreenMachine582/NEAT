@@ -1,18 +1,18 @@
 import logging
 
-__version__ = '1.2'
-__date__ = '17/03/2022'
+__version__ = '1.2.1'
+__date__ = '19/03/2022'
 
 
-def condense(array, condensed_array=None, depth=0, max_depth=0):
+def condense(array: list, condensed_array: list = None, depth: int = 0, max_depth: int = 0) -> list:
     """
-    Condenses a given array by removing depth. This is done by checking
-    the instance type of items within the array list.
-    :param array: list
-    :param condensed_array: list
+    Condenses a given array by joining inner lists.
+    :param array: list[Any]
+    :param condensed_array: list[Any]
     :param depth: int
     :param max_depth: int
-    :return condensed_array: list
+    :return:
+        - condensed_array - list[Any]
     """
     if condensed_array is None or depth == 0:
         condensed_array = []
@@ -30,12 +30,13 @@ def condense(array, condensed_array=None, depth=0, max_depth=0):
         logging.exception(e)
 
 
-def findMaxMin(array=None):
+def findMaxMin(array: list = None) -> dict:
     """
-    Finds the maximum and minimum values and indexes by searching the
-    array list linearly.
+    Finds the maximum and minimum values and indexes by searching
+     the array list linearly.
     :param array: list
-    :return max_min: dict
+    :return:
+        - max_min - dict[str: dict[str: Any | int]]
     """
     try:
         max_min = {"max": {"value": array[0], "index": 0}, "min": {"value": array[0], "index": 0}}
@@ -49,7 +50,3 @@ def findMaxMin(array=None):
         return max_min
     except Exception as e:
         logging.exception(e)
-
-
-def mean(array=None):
-    return sum(array) / len(array)
