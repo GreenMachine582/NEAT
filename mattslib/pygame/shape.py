@@ -13,9 +13,9 @@ class Rect:
     def __init__(self, pos: tuple, align: str, dims: list, colour: list):
         """
         Initiates the Shape object with given values.
-        :param pos: tuple[int, int]
+        :param pos: tuple[int | float, int | float]
         :param align: str
-        :param dims: list[int]
+        :param dims: list[int | float]
         :param colour: list[int]
         """
         self.pos = pos
@@ -43,11 +43,11 @@ class Rect:
             self.colour = kwargs['colour']
 
         if self.align == "ml":
-            self.hotspot = (self.pos[0], (self.pos[1] - (self.dims[1]/2)))
+            self.hotspot = (int(self.pos[0]), int(self.pos[1] - (self.dims[1]/2)))
         elif self.align == "mr":
-            self.hotspot = ((self.pos[0] - self.dims[0]), (self.pos[1] - (self.dims[1]/2)))
+            self.hotspot = (int(self.pos[0] - self.dims[0]), int(self.pos[1] - (self.dims[1]/2)))
         else:
-            self.hotspot = ((self.pos[0] - (self.dims[0]/2)), (self.pos[1] - (self.dims[1]/2)))
+            self.hotspot = (int(self.pos[0] - (self.dims[0]/2)), int(self.pos[1] - (self.dims[1]/2)))
 
     def draw(self, surface: Any, width: int = 0, boarder_radius: int = 0) -> None:
         """
@@ -70,11 +70,11 @@ class Rect:
         """
         pos = (pos[0] - origin[0], pos[1] - origin[1])
         if self.align == "ml":
-            return True if self.hotspot[0] <= pos[0] <= (self.pos[0] + self.dims[0]) and \
-                           self.hotspot[1] <= pos[1] <= (self.pos[1] + (self.dims[1]/2)) else False
+            return True if self.hotspot[0] <= pos[0] <= int(self.pos[0] + self.dims[0]) and \
+                           self.hotspot[1] <= pos[1] <= int(self.pos[1] + (self.dims[1]/2)) else False
         elif self.align == "mr":
             return True if self.hotspot[0] <= pos[0] <= self.pos[0] and \
-                           self.hotspot[1] <= pos[1] <= (self.pos[1] + (self.dims[1]/2)) else False
+                           self.hotspot[1] <= pos[1] <= int(self.pos[1] + (self.dims[1]/2)) else False
         else:
-            return True if self.hotspot[0] <= pos[0] <= (self.pos[0] + (self.dims[0] / 2)) and \
-                           self.hotspot[1] <= pos[1] <= (self.pos[1] + (self.dims[1] / 2)) else False
+            return True if self.hotspot[0] <= pos[0] <= int(self.pos[0] + (self.dims[0] / 2)) and \
+                           self.hotspot[1] <= pos[1] <= int(self.pos[1] + (self.dims[1] / 2)) else False
