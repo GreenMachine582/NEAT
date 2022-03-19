@@ -13,10 +13,10 @@ class Message(object):
     """
     Message is an object that handles updating and drawing a message.
     """
-    def __init__(self, text: Any, pos: tuple, colour: list = None, size: int = 20, align: str = ''):
+    def __init__(self, text: str, pos: tuple, colour: list = None, size: int = 20, align: str = ''):
         """
         Initiates the Message object with given values.
-        :param text: Any
+        :param text: str
         :param pos: tuple[int, int]
         :param colour: list[int]
         :param size: int
@@ -34,17 +34,31 @@ class Message(object):
 
         self.update()
 
-    def update(self, dims: list = None) -> None:
+    def update(self, **kwargs: Any) -> None:
         """
         Updates the position of the message.
-        :param dims: list[int]
+        :param kwargs: Any
         :return:
             - None
         """
-        padding = 0 if dims is None else int((dims[0] / 2) - (self.text_rect[2] / 2))
+
+        if 'text' in kwargs:
+            self.text = kwargs['text']
+        if 'pos' in kwargs:
+            self.pos = kwargs['pos']
+        if 'colour' in kwargs:
+            self.colour = kwargs['colour']
+        if 'size' in kwargs:
+            self.size = kwargs['size']
+        if 'align' in kwargs:
+            self.align = kwargs['align']
+        if 'font' in kwargs:
+            self.font = kwargs['font']
+            
+        padding = int((kwargs['dims'][0] / 2) - (self.text_rect[2] / 2)) if 'dims' in kwargs else 0
 
         text_font = font.Font(self.font, self.size)
-        self.text_surface = text_font.render(str(self.text), True, self.colour)
+        self.text_surface = text_font.render(self.text, True, self.colour)
         self.text_rect = self.text_surface.get_rect()
         if self.align == "ml":
             self.text_rect.midleft = (self.pos[0] + padding, self.pos[1])
