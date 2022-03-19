@@ -28,7 +28,7 @@ def countOccurrence(array: list = None) -> dict:
 def combineByValues(array: dict = None) -> dict:
     """
     Combines certain keys by the given array values, producing
-     inverted dict.
+    inverted dict.
     :param array: dict[Any: Any]
     :return:
         - sorted_dict - dict[Any: list[Any]]
