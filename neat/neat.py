@@ -1,16 +1,16 @@
 from __future__ import annotations
 
 from copy import deepcopy
-import pickle
 import random
 
 from .genome import Genome
 from .settings import Settings
 from .specie import Specie
 from mattslib.dict import countOccurrence
+from mattslib.file import read, write
 
 __version__ = '1.5.1'
-__date__ = '18/03/2022'
+__date__ = '19/03/2022'
 
 
 def genomicDistance(x_member: Genome, y_member: Genome, distance_weights: dict) -> float:
@@ -106,12 +106,15 @@ class NEAT(object):
      and its parameters and attributes are evolved as genes.
     """
 
-    def __init__(self, settings_dir: str = ''):
+    def __init__(self, directory: str = '', game_dir: str = ''):
         """
         Initiates the NEAT object with default and given values.
-        :param settings_dir:
+        :param directory: str
+        :param game_dir: str
         """
-        self.settings = Settings(settings_dir)
+        self.directory = directory
+        self.game_dir = directory + game_dir
+        self.settings = Settings(self.game_dir)
         self.inputs = 0
         self.outputs = 0
 
@@ -329,21 +332,20 @@ class NEAT(object):
 
     def save(self, filename: str) -> None:
         """
-        Saves the NEAT object to file.
+        Saves the NEAT object by writing to file.
         :param filename: str
         :return:
             - None
         """
-        with open(filename+'.neat', 'wb') as neat_file:
-            pickle.dump(self, neat_file, pickle.HIGHEST_PROTOCOL)
+        write(self, f"{self.game_dir}\\{filename}.neat")
 
     @staticmethod
-    def load(filename: str) -> NEAT:
+    def load(filename: str, directory: str = '') -> NEAT:
         """
-        Loads the NEAT object from file.
+        Loads the NEAT object by reading the file.
         :param filename: str
+        :param directory: str
         :return:
             - neat - NEAT
         """
-        with open(filename+'.neat', 'rb') as neat_file:
-            return pickle.load(neat_file)
+        return read(f"{directory}\\{filename}.neat")
