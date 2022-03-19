@@ -33,7 +33,7 @@ def condense(array: list, condensed_array: list = None, depth: int = 0, max_dept
 def findMaxMin(array: list = None) -> dict:
     """
     Finds the maximum and minimum values and indexes by searching
-     the array list linearly.
+    the array list linearly.
     :param array: list
     :return:
         - max_min - dict[str: dict[str: Any | int]]
