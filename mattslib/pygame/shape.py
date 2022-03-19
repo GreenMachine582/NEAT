@@ -10,12 +10,12 @@ class Rect:
     """
     Rect is an object that creates, and draws rectangles to given surface.
     """
-    def __init__(self, pos: list, align: str, dims: list, colour: list):
+    def __init__(self, pos: tuple, align: str, dims: list, colour: list):
         """
         Initiates the Shape object with given values.
-        :param pos: list[int | float]
+        :param pos: tuple[int, int]
         :param align: str
-        :param dims: list[int | float]
+        :param dims: list[int]
         :param colour: list[int]
         """
         self.pos = pos
