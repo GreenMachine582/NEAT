@@ -11,7 +11,7 @@ __date__ = '19/03/2022'
 def read(file_dir: str = '') -> Any | None:
     """
     Reads the given file and checks the extension to
-     determine a fit loading method.
+    determine a fit loading method.
     :param file_dir: str
     :return: 
         - contents - Any | None
@@ -35,7 +35,7 @@ def read(file_dir: str = '') -> Any | None:
 def write(contents: Any = None, file_dir: str = '') -> None:
     """
     Writes the contents to file and checks extension
-     to determine a fit writing method.
+    to determine a fit writing method.
     :param contents: Any
     :param file_dir: str
     :return: 
