@@ -29,7 +29,7 @@ class Rect:
     def update(self, **kwargs: Any) -> None:
         """
         Updates hotspot of rect.
-        :kwargs: Any
+        :param kwargs: Any
         :return:
             - None
         """
