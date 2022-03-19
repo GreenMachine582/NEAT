@@ -1,10 +1,16 @@
 import logging
 
-__version__ = '1.2'
-__date__ = '17/03/2022'
+__version__ = '1.2.1'
+__date__ = '19/03/2022'
 
 
-def countOccurrence(array=None):
+def countOccurrence(array: list = None) -> dict:
+    """
+    Counts the occurrence of items from array.
+    :param array: list[Any]
+    :return:
+        - categories - dict[Any: int]
+    """
     try:
         categories = {}
         for n in array:
@@ -17,7 +23,14 @@ def countOccurrence(array=None):
         logging.exception(e)
 
 
-def sortByValues(array=None):
+def combineByValues(array: dict = None) -> dict:
+    """
+    Combines certain keys by the given array values, producing
+     inverted dict.
+    :param array: dict[Any: Any]
+    :return:
+        - sorted_dict - dict[Any: list[Any]]
+    """
     try:
         sorted_dict = {}
         for item_key in array:
@@ -29,16 +42,30 @@ def sortByValues(array=None):
         logging.exception(e)
 
 
-def sortIntoDict(array, sort_with=None):
-    list_to_dict = {}
+def sortIntoDict(array: list, sort_with: list = None) -> dict:
+    """
+    Creates a sorted dict with given keys and array values.
+    :param array: list[Any]
+    :param sort_with: list[Any]
+    :return:
+        - lists_to_dict - dict[Any: list[Any]
+    """
+    lists_to_dict = {}
     for key in range(len(sort_with)):
-        if sort_with[key] not in list_to_dict:
-            list_to_dict[sort_with[key]] = []
-        list_to_dict[sort_with[key]].append(array[key])
-    return list_to_dict
+        if sort_with[key] not in lists_to_dict:
+            lists_to_dict[sort_with[key]] = []
+        lists_to_dict[sort_with[key]].append(array[key])
+    return lists_to_dict
 
 
-def removeKeys(array=None, remove=None):
+def removeKeys(array: dict = None, remove: Any = None) -> dict:
+    """
+    Removes keys from array by given remove value.
+    :param array: dict[Any: Any]
+    :param remove: Any
+    :return: 
+        - sorted_dict - dict[Any: Any]
+    """
     if remove is None:
         remove = []
     try:
