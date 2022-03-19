@@ -21,7 +21,7 @@ OPTION_WIDTH, OPTION_HEIGHT = WIDTH, HEIGHT
 FPS = 40
 
 GAME = 'connect4'
-PLAYER_TYPES = ['Human', 'NEAT', '1', '100', '1000']
+PLAYER_TYPES = ['Human', 'NEAT', '1', '1000', '10000']
 SHOW_EVERY = ['Genome', 'Generation', 'None']
 SPEEDS = [1, 5, 25, 100, 500]
 DIRECTORY = os.path.dirname(os.path.realpath(__file__))
@@ -185,17 +185,21 @@ class Info:
         self.generate()
 
     def generate(self):
-        self.header['generation'] = mlpg.Message("Generation:", [self.BOARDER, self.BOARDER], align='ml')
-        self.header['specie'] = mlpg.Message("Species:", [self.BOARDER, INFO_HEIGHT - self.BOARDER], align='ml')
-        self.header['genome'] = mlpg.Message(":Genome", [INFO_WIDTH - self.BOARDER, self.BOARDER], align='mr')
-        self.header['fitness'] = mlpg.Message(":Fitness", [INFO_WIDTH - self.BOARDER, INFO_HEIGHT - self.BOARDER],
+        self.header['generation'] = mlpg.Message("Generation:", (self.BOARDER, self.BOARDER), align='ml')
+        self.header['specie'] = mlpg.Message("Species:", (self.BOARDER, INFO_HEIGHT - self.BOARDER), align='ml')
+        self.header['genome'] = mlpg.Message(":Genome", (INFO_WIDTH - self.BOARDER, self.BOARDER), align='mr')
+        self.header['fitness'] = mlpg.Message(":Fitness", (INFO_WIDTH - self.BOARDER, INFO_HEIGHT - self.BOARDER),
                                               align='mr')
+        self.data['generation'] = mlpg.Message(0, (150, self.BOARDER), align='ml')
+        self.data['species'] = mlpg.Message(0, (150, INFO_HEIGHT - self.BOARDER), align='ml')
+        self.data['genome'] = mlpg.Message(0, (360, self.BOARDER), align='mr')
+        self.data['fitness'] = mlpg.Message(0, (360, INFO_HEIGHT - self.BOARDER), align='mr')
 
     def update(self, neat_info):
-        self.data['generation'] = mlpg.Message(neat_info['generation'], [150, self.BOARDER], align='ml')
-        self.data['species'] = mlpg.Message(neat_info['current_species'], [150, INFO_HEIGHT - self.BOARDER], align='ml')
-        self.data['genome'] = mlpg.Message(neat_info['current_genome'], [360, self.BOARDER], align='mr')
-        self.data['fitness'] = mlpg.Message(neat_info['fitness'], [360, INFO_HEIGHT - self.BOARDER], align='mr')
+        self.data['generation'].update(text=neat_info['generation'])
+        self.data['species'].update(text=neat_info['current_species'])
+        self.data['genome'].update(text=neat_info['current_genome'])
+        self.data['fitness'].update(text=neat_info['fitness'])
 
     def draw(self, window):
         window.fill(self.colour['background'])
@@ -214,18 +218,18 @@ class Menu:
 
         self.buttons = []
 
-        self.generate()
-
-    def generate(self):
         self.buttons = [
             mlpg.Button("Reset", (MENU_WIDTH * (1 / 3), MENU_HEIGHT * (1 / 3)), GREY, handler=connect4.reset),
             mlpg.Button("Options", (MENU_WIDTH * (2 / 3), MENU_HEIGHT * (1 / 3)), GREY, handler=options.main),
             mlpg.Button("Switch", (MENU_WIDTH * (1 / 3), MENU_HEIGHT * (2 / 3)), GREY, handler=connect4.switchPlayer),
             mlpg.Button("QUIT", (MENU_WIDTH * (2 / 3), MENU_HEIGHT * (2 / 3)), GREY, handler=close)]
 
-    def update(self, mouse_pos, mouse_clicked):
-        for button in self.buttons:
-            button.mouseOver(mouse_pos, mouse_clicked, origin=(GAME_PANEL[0], ADDON_PANEL[1] - MENU_HEIGHT))
+        self.update()
+
+    def update(self, *args):
+        if len(args) == 2:
+            for button in self.buttons:
+                button.update(args[0], args[1], origin=(GAME_PANEL[0], ADDON_PANEL[1] - MENU_HEIGHT))
 
     def draw(self, window):
         window.fill(self.colour['background'])
@@ -248,7 +252,7 @@ class Options:
 
     def generate(self):
         self.buttons = {'back': mlpg.Button("Back", (OPTION_WIDTH * (2 / 5), OPTION_HEIGHT * (5 / 6)),
-                                            GREY, handler=True),
+                                            GREY, align='ml', handler=True),
                         'quit': mlpg.Button("QUIT", (OPTION_WIDTH * (3 / 5), OPTION_HEIGHT * (5 / 6)),
                                             GREY, handler=close)}
         self.messages = []
@@ -256,8 +260,7 @@ class Options:
         for player_key in players:
             button_states = [True if players[player_key] == player_type else False for player_type in PLAYER_TYPES]
             self.group_buttons[f"player_{player_key}"] = mlpg.ButtonGroup(PLAYER_TYPES,
-                                                                          (self.BOARDER + (OPTION_WIDTH * (1 / 6))
-                                                                           + 100,
+                                                                          (self.BOARDER + (OPTION_WIDTH * (1/6) + 100),
                                                                            self.BOARDER + (len(self.messages) * 90)),
                                                                           GREY, GREEN, button_states=button_states)
             self.messages.append(mlpg.Message(f"Player {player_key}:", (self.BOARDER + (OPTION_WIDTH * (1 / 6)),
@@ -272,14 +275,14 @@ class Options:
                                                            self.BOARDER + (len(self.messages) * 90)), align='mr'))
 
         button_states = [True if speed == evolution_speed else False for speed in SPEEDS]
-        self.group_buttons['evolution_speed'] = mlpg.ButtonGroup(SPEEDS, (self.BOARDER + (OPTION_WIDTH * (1 / 6)) + 100,
+        self.group_buttons['evolution_speed'] = mlpg.ButtonGroup(SPEEDS, (self.BOARDER + (OPTION_WIDTH * (1 / 6) + 100),
                                                                           self.BOARDER + (len(self.messages) * 90)),
                                                                  GREY, GREEN, button_states=button_states)
         self.messages.append(mlpg.Message(f"Evolution Speed:", (self.BOARDER + (OPTION_WIDTH * (1 / 6)),
                                                                 self.BOARDER + (len(self.messages) * 90)), align='mr'))
 
         button_states = [True if SHOW == show_every else False for SHOW in SHOW_EVERY]
-        self.group_buttons['show'] = mlpg.ButtonGroup(SHOW_EVERY, (self.BOARDER + (OPTION_WIDTH * (1 / 6)) + 100,
+        self.group_buttons['show'] = mlpg.ButtonGroup(SHOW_EVERY, (self.BOARDER + (OPTION_WIDTH * (1 / 6) + 100),
                                                                    self.BOARDER + (len(self.messages) * 90)),
                                                       GREY, GREEN, button_states=button_states)
         self.messages.append(mlpg.Message(f"Show Every:", (self.BOARDER + (OPTION_WIDTH * (1 / 6)),
@@ -289,7 +292,7 @@ class Options:
         global players, game_speed, evolution_speed, max_fps, show_every
         self.generate()
         for button_key in self.buttons:
-            action = self.buttons[button_key].mouseOver(mouse_pos, mouse_clicked)
+            action = self.buttons[button_key].update(mouse_pos, mouse_clicked)
             if action is not None:
                 return True
 
@@ -401,6 +404,7 @@ def main():
             if players[cp] != PLAYER_TYPES[0]:
                 if frame_count >= max_fps / speed:
                     frame_count = 1
+
                     if players[cp] == PLAYER_TYPES[1]:
                         current_genome = neats[cp].getGenome()
                     else:
