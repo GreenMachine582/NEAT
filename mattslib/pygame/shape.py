@@ -10,7 +10,7 @@ class Rect:
     """
     Rect is an object that creates, and draws rectangles to given surface.
     """
-    def __init__(self, pos: list, align: str, dims: list = None, colour: list = None):
+    def __init__(self, pos: list, align: str, dims: list, colour: list):
         """
         Initiates the Shape object with given values.
         :param pos: list[int | float]
@@ -22,7 +22,7 @@ class Rect:
         self.hotspot = pos
         self.align = align
         self.dims = dims
-        self.colour = [0, 0, 0] if colour is None else colour
+        self.colour = colour
 
         self.update()
 
