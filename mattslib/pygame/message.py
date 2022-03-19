@@ -13,11 +13,11 @@ class Message(object):
     """
     Message is an object that handles updating and drawing a message.
     """
-    def __init__(self, text: str, pos: tuple, colour: list = None, size: int = 20, align: str = ''):
+    def __init__(self, text: Any, pos: tuple, colour: list = None, size: int = 20, align: str = ''):
         """
         Initiates the Message object with given values.
-        :param text: str
-        :param pos: tuple[int, int]
+        :param text: Any
+        :param pos: tuple[int | float, int | float]
         :param colour: list[int]
         :param size: int
         :param align: str
@@ -54,16 +54,16 @@ class Message(object):
             self.align = kwargs['align']
         if 'font' in kwargs:
             self.font = kwargs['font']
-            
+
         padding = int((kwargs['dims'][0] / 2) - (self.text_rect[2] / 2)) if 'dims' in kwargs else 0
 
         text_font = font.Font(self.font, self.size)
-        self.text_surface = text_font.render(self.text, True, self.colour)
+        self.text_surface = text_font.render(str(self.text), True, self.colour)
         self.text_rect = self.text_surface.get_rect()
         if self.align == "ml":
-            self.text_rect.midleft = (self.pos[0] + padding, self.pos[1])
+            self.text_rect.midleft = (int(self.pos[0] + padding), int(self.pos[1]))
         elif self.align == "mr":
-            self.text_rect.midright = (self.pos[0] - padding, self.pos[1])
+            self.text_rect.midright = (int(self.pos[0] - padding), int(self.pos[1]))
         else:
             self.text_rect.center = self.pos
 
