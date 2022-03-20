@@ -5,8 +5,8 @@ import random
 import mattslib as ml
 import mattslib.pygame as mlpg
 
-__version__ = '1.4'
-__date__ = '16/03/2022'
+__version__ = '1.5'
+__date__ = '20/03/2022'
 
 # Constants
 WIDTH, HEIGHT = 1120, 640
@@ -29,32 +29,38 @@ class Piece:
 
     def __init__(self, coordinates, rows, cols, colour):
         self.coordinates = coordinates
-        self.center_pos = [0, 0]
         self.radius = 30
-        self.diameter = self.radius * 2
+
         self.active = False
-        self.visible = True
+        self.show = True
         self.colour = colour
-        self.highlight_colour = self.colour
 
-        self.generate(rows, cols)
+        self.radius = (((GAME_HEIGHT - self.BOARDER * 2) / max(rows, cols)) - self.SPACING) / 2
+        self.pos = (self.BOARDER + (self.coordinates[1] * (self.radius * 2 + self.SPACING)),
+                    self.BOARDER + self.TOP_PADDING + (self.coordinates[0] * (self.radius * 2 + self.SPACING)))
 
-    def generate(self, rows, cols):
-        self.diameter = ((GAME_HEIGHT - self.BOARDER * 2) / max(rows, cols)) - self.SPACING
-        self.radius = self.diameter / 2
-        pos = [int(self.BOARDER + (self.coordinates[1] * (self.diameter + self.SPACING))),
-               int(self.BOARDER + self.TOP_PADDING + (self.coordinates[0] * (self.diameter + self.SPACING)))]
-        self.center_pos = [int(pos[0] + self.radius), int(pos[1] + self.radius)]
+        self.circle = mlpg.shape.Circle(self.pos, self.colour, self.radius, 'tl')
+        self.circle_boarder = mlpg.shape.Circle(self.pos, mlpg.changeColour(colour, -70), self.radius, 'tl')
 
-    def draw(self, window, boarder=5):
-        if self.visible:
-            pg.draw.circle(window, mlpg.changeColour(self.highlight_colour), self.center_pos, self.radius)
-            pg.draw.circle(window, self.colour, self.center_pos, self.radius-boarder)
+        self.update()
 
-    def setColour(self, colour):
-        self.colour = colour
-        self.highlight_colour = colour
-        self.active = True
+    def update(self, **kwargs):
+        if 'colour' in kwargs:
+            self.colour = kwargs['colour']
+            self.circle.update(colour=self.colour)
+            self.circle_boarder.update(colour=mlpg.changeColour(kwargs['colour'], -70))
+            self.active = True
+        if 'highlight_colour' in kwargs:
+            self.circle_boarder.update(colour=mlpg.changeColour(kwargs['highlight_colour'], -70))
+        if 'active' in kwargs:
+            self.active = kwargs['active']
+        if 'show' in kwargs:
+            self.show = kwargs['show']
+
+    def draw(self, surface, width=5):
+        if self.show:
+            self.circle.draw(surface)
+            self.circle_boarder.draw(surface, width)
 
 
 class Connect4:
@@ -75,24 +81,22 @@ class Connect4:
         self.match = True
         self.turn = 0
 
-        self.generate()
-
-    def generate(self):
         self.board = [[Piece([h, j], self.ROWS, self.COLUMNS, self.EMPTY) for j in range(self.COLUMNS)]
                       for h in range(self.ROWS)]
 
     def reset(self):
-        self.generate()
+        self.board = [[Piece([h, j], self.ROWS, self.COLUMNS, self.EMPTY) for j in range(self.COLUMNS)]
+                      for h in range(self.ROWS)]
         self.match = True
         self.turn = 0
         self.current_player = 1
         self.opponent = 2 if self.current_player == 1 else 1
 
     def draw(self, window, boarder=10):
-        window.fill(mlpg.changeColour(self.colour['background']))
+        window.fill(mlpg.changeColour(self.colour['background'], -70))
         pg.draw.rect(window, self.colour['background'], ([boarder, boarder],
                                                          [GAME_WIDTH - (boarder * 2), GAME_HEIGHT - (boarder * 2)]))
-        message = mlpg.Message(f"Player {self.current_player}'s turn!", [int(GAME_WIDTH / 2), 60], size=40)
+        message = mlpg.Message(f"Player {self.current_player}'s turn!", (int(GAME_WIDTH / 2), 60), size=40)
         message.draw(window)
         for row in self.board:
             for piece in row:
@@ -111,14 +115,14 @@ class Connect4:
                     if directions[direction_pair][direction] is not None:
                         inputs = directions[direction_pair][direction]
                         possible_moves[possible_move] += genome.forward(inputs)[0]
-        sorted_moves = ml.dict.sortByValues(possible_moves)
+        sorted_moves = ml.dict.combineByValues(possible_moves)
         max_min_keys = ml.list.findMaxMin(list(sorted_moves.keys()))
         move = random.choice(sorted_moves[max_min_keys['max']['value']])
         return move
 
     def makeMove(self, move):
         if move is not None:
-            self.board[move[0]][move[1]].setColour(self.PLAYERS[self.current_player])
+            self.board[move[0]][move[1]].update(colour=self.PLAYERS[self.current_player])
             self.turn += 1
         game_state = self.winChecker(move) if move is not None else -2
         return game_state
@@ -135,14 +139,14 @@ class Connect4:
         return [move, possible_move]
 
     def showWin(self, move, direction_pair, colour):
-        self.board[move[0]][move[1]].highlight_colour = colour
+        self.board[move[0]][move[1]].update(highlight_colour=colour)
         for direction in direction_pair:
             for n in range(1, self.LENGTH):
                 a, b = move[0] + (n * direction[0]), move[1] + (n * direction[1])
                 if 0 <= a < self.ROWS and 0 <= b < self.COLUMNS:
                     piece = self.board[a][b]
                     if piece.colour == self.PLAYERS[self.current_player]:
-                        self.board[a][b].highlight_colour = colour
+                        self.board[a][b].update(highlight_colour=colour)
                     else:
                         break
                 else:
