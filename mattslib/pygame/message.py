@@ -3,7 +3,7 @@ from __future__ import annotations
 from pygame import font
 
 __version__ = '1.2.1'
-__date__ = '19/03/2022'
+__date__ = '20/03/2022'
 
 
 font.init()
@@ -36,7 +36,7 @@ class Message(object):
 
     def update(self, **kwargs: Any) -> None:
         """
-        Updates the position of the message.
+        Updates the position of the message and other relevant attributes.
         :param kwargs: Any
         :return:
             - None
@@ -55,17 +55,25 @@ class Message(object):
         if 'font' in kwargs:
             self.font = kwargs['font']
 
-        padding = int((kwargs['dims'][0] / 2) - (self.text_rect[2] / 2)) if 'dims' in kwargs else 0
-
         text_font = font.Font(self.font, self.size)
         self.text_surface = text_font.render(str(self.text), True, self.colour)
         self.text_rect = self.text_surface.get_rect()
-        if self.align == "ml":
-            self.text_rect.midleft = (int(self.pos[0] + padding), int(self.pos[1]))
-        elif self.align == "mr":
-            self.text_rect.midright = (int(self.pos[0] - padding), int(self.pos[1]))
-        else:
-            self.text_rect.center = self.pos
+
+        padding = [self.text_rect[2] / 2, self.text_rect[3] / 2]
+        if 'dims' in kwargs:
+            for i in range(len(padding)):
+                padding[i] = int(kwargs['dims'][i] / 2)
+
+        hotspot = [int(self.pos[0]), int(self.pos[1])]
+        if 'l' in self.align:
+            hotspot[0] += padding[0]
+        elif 'r' in self.align:
+            hotspot[0] -= padding[0]
+        if 't' in self.align:
+            hotspot[1] -= padding[1]
+        elif 'b' in self.align:
+            hotspot[1] += padding[1]
+        self.text_rect.center = hotspot
 
     def draw(self, surface: Any) -> None:
         """
