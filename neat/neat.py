@@ -295,6 +295,7 @@ class NEAT(object):
                 self.current_species += 1
             else:
                 if self.generation + 1 in self.settings.save_intervals:
+                    print(f"Saving - {filename}_gen_{self.generation + 1}.neat")
                     self.save(f"{filename}_gen_{self.generation + 1}")
                 self.evolve()
                 self.current_species = 0
