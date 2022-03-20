@@ -1,8 +1,11 @@
-import pygame as pg
+from __future__ import annotations
+
 import os
+import pygame as pg
 
 from connect4 import Connect4
 from neat import NEAT
+
 import mattslib as ml
 import mattslib.pygame as mlpg
 
@@ -39,8 +42,8 @@ DARKER = [-65, -65, -65]
 # Globals - Defaults
 players = {1: PLAYER_TYPES[1], 2: PLAYER_TYPES[1]}
 neats = {1: None, 2: None}
-show_every = SHOW_EVERY[0]
-game_speed = SPEEDS[0]
+show_every = SHOW_EVERY[1]
+game_speed = SPEEDS[-1]
 evolution_speed = SPEEDS[-1]
 max_fps = max(FPS, max(game_speed, evolution_speed))
 
@@ -211,12 +214,14 @@ class Info:
 
 
 class Menu:
+    """
+    Menu is a class that allows buttons to be accessed during the main loop and handles the assigned action.
+    """
+
     BOARDER = 30
 
     def __init__(self):
         self.colour = {'background': WHITE}
-
-        self.buttons = []
 
         self.buttons = [
             mlpg.Button("Reset", (MENU_WIDTH * (1 / 3), MENU_HEIGHT * (1 / 3)), GREY, handler=connect4.reset),
@@ -226,15 +231,27 @@ class Menu:
 
         self.update()
 
-    def update(self, *args):
+    def update(self, *args: Any) -> None:
+        """
+        Updates the menu buttons and passes environment information.
+        :param args: Any
+        :return:
+            - None
+        """
         if len(args) == 2:
             for button in self.buttons:
                 button.update(args[0], args[1], origin=(GAME_PANEL[0], ADDON_PANEL[1] - MENU_HEIGHT))
 
-    def draw(self, window):
-        window.fill(self.colour['background'])
+    def draw(self, surface: Any) -> None:
+        """
+        Draws the background and buttons to the given surface
+        :param surface: Any
+        :return:
+            - None
+        """
+        surface.fill(self.colour['background'])
         for button in self.buttons:
-            button.draw(window)
+            button.draw(surface)
 
 
 class Options:
@@ -252,7 +269,7 @@ class Options:
 
     def generate(self):
         self.buttons = {'back': mlpg.Button("Back", (OPTION_WIDTH * (2 / 5), OPTION_HEIGHT * (5 / 6)),
-                                            GREY, align='ml', handler=True),
+                                            GREY, handler=True),
                         'quit': mlpg.Button("QUIT", (OPTION_WIDTH * (3 / 5), OPTION_HEIGHT * (5 / 6)),
                                             GREY, handler=close)}
         self.messages = []
