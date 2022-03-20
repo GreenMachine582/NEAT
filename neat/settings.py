@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import json
+from mattslib.file import read, write
 
 __version__ = '1.5.1'
-__date__ = '18/03/2022'
+__date__ = '20/03/2022'
 
 
 class Settings(object):
@@ -63,9 +63,7 @@ class Settings(object):
         :return:
             - None
         """
-        with open(f"{directory}\\settings.json") as f:
-            settings = json.load(f)
-            self.__dict__.update(settings)
+        self.__dict__.update(read(f"{directory}\\settings.json"))
 
     def save(self, directory='') -> None:
         """
@@ -74,5 +72,4 @@ class Settings(object):
         :return:
             - None
         """
-        with open(f"{directory}\\settings.json", 'w') as f:
-            json.dump(self.__dict__, f, indent=4)
+        write(self.__dict__, f"{directory}\\settings.json")
