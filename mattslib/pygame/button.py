@@ -5,10 +5,10 @@ from .message import Message
 from .shape import Rect, Circle
 
 __version__ = '1.2.1'
-__date__ = '19/03/2022'
+__date__ = '20/03/2022'
 
 
-def changeColour(colour: list, change_by: int = -40) -> list:
+def changeColour(colour: list, change_by: int) -> list:
     """
     Changes the given colour with value, the clamps the colour ranges.
     :param colour: list[int]
@@ -44,6 +44,7 @@ class Button:
 
         self.selected = False
         self.active = True
+        self.show = True
 
         self.message = Message(self.text, self.pos, align=self.align)
         if self.dims is None:
@@ -93,16 +94,27 @@ class Button:
             self.dims = kwargs['dims']
             self.button_rect.update(dims=self.dims)
             self.button_boarder.update(dims=self.dims)
+        if 'active' in kwargs:
+            self.active = kwargs['active']
+        if 'show' in kwargs:
+            self.show = kwargs['show']
 
-        if mouse_pos is not None:
+        if mouse_pos is not None and self.active and self.show:
             self.selected = self.button_rect.collide(mouse_pos, origin=origin)
             if self.selected and mouse_clicked:
                 if callable(self.handler):
                     return self.handler()
                 return self.handler if self.handler is not None else True
 
-        colour = self.colour if not self.selected else changeColour(self.colour, 40)
-        highlight = changeColour(self.colour) if not self.selected else self.colour
+        if self.active and self.selected:
+            colour = changeColour(self.colour, 40)
+            highlight = self.colour
+        else:
+            colour = self.colour
+            highlight = changeColour(self.colour, -40)
+            if not self.active:
+                colour = changeColour(colour, -50)
+                highlight = changeColour(colour, -50)
 
         self.button_rect.update(colour=colour)
         self.button_boarder.update(colour=highlight)
@@ -115,9 +127,10 @@ class Button:
         :return:
             - None
         """
-        self.button_rect.draw(surface, boarder_radius=4)
-        self.button_boarder.draw(surface, width=5, boarder_radius=4)
-        self.message.draw(surface)
+        if self.show:
+            self.button_rect.draw(surface, boarder_radius=4)
+            self.button_boarder.draw(surface, width=5, boarder_radius=4)
+            self.message.draw(surface)
 
 
 class ButtonGroup:
