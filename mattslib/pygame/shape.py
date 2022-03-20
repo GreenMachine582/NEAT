@@ -1,53 +1,64 @@
 from __future__ import annotations
 
+import math
+
 import pygame as pg
 
 __version__ = '1.2.1'
-__date__ = '19/03/2022'
+__date__ = '20/03/2022'
 
 
 class Rect:
     """
-    Rect is an object that creates, and draws rectangles to given surface.
+    Rect is an object that draws, updates and checks collisions with
+    given environment.
     """
-    def __init__(self, pos: tuple, align: str, dims: list, colour: list):
+
+    def __init__(self, pos: tuple, colour: list, dims: list, align: str = ''):
         """
-        Initiates the Shape object with given values.
+        Initiates the Rect object with given values.
         :param pos: tuple[int | float, int | float]
-        :param align: str
-        :param dims: list[int | float]
         :param colour: list[int]
+        :param dims: list[int | float]
+        :param align: str
         """
         self.pos = pos
-        self.hotspot = pos
-        self.align = align
-        self.dims = dims
         self.colour = colour
+        self.dims = dims
+        self.align = align
+
+        self.hotspot = pos
 
         self.update()
 
     def update(self, **kwargs: Any) -> None:
         """
-        Updates hotspot of rect.
+        Updates hotspot of rect and other values if necessary.
         :param kwargs: Any
         :return:
             - None
         """
         if 'pos' in kwargs:
             self.pos = kwargs['pos']
-        if 'align' in kwargs:
-            self.align = kwargs['align']
-        if 'dims' in kwargs:
-            self.dims = kwargs['dims']
         if 'colour' in kwargs:
             self.colour = kwargs['colour']
+        if 'dims' in kwargs:
+            self.dims = kwargs['dims']
+        if 'align' in kwargs:
+            self.align = kwargs['align']
 
-        if self.align == "ml":
-            self.hotspot = (int(self.pos[0]), int(self.pos[1] - (self.dims[1]/2)))
-        elif self.align == "mr":
-            self.hotspot = (int(self.pos[0] - self.dims[0]), int(self.pos[1] - (self.dims[1]/2)))
-        else:
-            self.hotspot = (int(self.pos[0] - (self.dims[0]/2)), int(self.pos[1] - (self.dims[1]/2)))
+        hotspot = [int(self.pos[0]), int(self.pos[1])]
+
+        if 'l' in self.align:
+            hotspot[0] += int(self.dims[0] / 2)
+        elif 'r' in self.align:
+            hotspot[0] -= int(self.dims[0] / 2)
+        if 't' in self.align:
+            hotspot[1] -= int(self.dims[1] / 2)
+        elif 'b' in self.align:
+            hotspot[1] += int(self.dims[1] / 2)
+
+        self.hotspot = tuple(hotspot)
 
     def draw(self, surface: Any, width: int = 0, boarder_radius: int = 0) -> None:
         """
@@ -58,7 +69,8 @@ class Rect:
         :return:
             - None
         """
-        pg.draw.rect(surface, self.colour, pg.Rect(self.hotspot, self.dims), width, boarder_radius)
+        pos = (self.hotspot[0] - self.dims[0]/2, self.hotspot[1] - self.dims[1]/2)
+        pg.draw.rect(surface, self.colour, pg.Rect(pos, self.dims), width, boarder_radius)
 
     def collide(self, pos: tuple, origin: tuple = (0, 0)) -> bool:
         """
@@ -69,12 +81,87 @@ class Rect:
             - collide - bool
         """
         pos = (pos[0] - origin[0], pos[1] - origin[1])
-        if self.align == "ml":
-            return True if self.hotspot[0] <= pos[0] <= int(self.pos[0] + self.dims[0]) and \
-                           self.hotspot[1] <= pos[1] <= int(self.pos[1] + (self.dims[1]/2)) else False
-        elif self.align == "mr":
-            return True if self.hotspot[0] <= pos[0] <= self.pos[0] and \
-                           self.hotspot[1] <= pos[1] <= int(self.pos[1] + (self.dims[1]/2)) else False
-        else:
-            return True if self.hotspot[0] <= pos[0] <= int(self.pos[0] + (self.dims[0] / 2)) and \
-                           self.hotspot[1] <= pos[1] <= int(self.pos[1] + (self.dims[1] / 2)) else False
+        if pos[0] in range(int(self.hotspot[0] - self.dims[0] / 2), int(self.hotspot[0] + self.dims[0] / 2)) and \
+                pos[1] in range(int(self.hotspot[1] - self.dims[1] / 2), int(self.hotspot[1] + self.dims[1] / 2)):
+            return True
+        return False
+
+
+class Circle:
+    """
+    Circle is an object that draws, updates and checks collisions with
+    given environment.
+    """
+
+    def __init__(self, pos: tuple, colour: list, radius: float, align: str):
+        """
+        Initiates the Circle object with given values.
+        :param pos: tuple[float, float]
+        :param colour: list[int]
+        :param radius: float
+        :param align: str
+        """
+        self.pos = pos
+        self.colour = colour
+        self.radius = radius
+        self.align = align
+
+        self.hotspot = pos
+
+        self.update()
+
+    def update(self, **kwargs: Any) -> None:
+        """
+        Updates hotspot and other values if necessary.
+        :param kwargs: Any
+        :return:
+            - None
+        """
+        if 'pos' in kwargs:
+            self.pos = kwargs['pos']
+        if 'colour' in kwargs:
+            self.colour = kwargs['colour']
+        if 'radius' in kwargs:
+            self.radius = kwargs['radius']
+        if 'align' in kwargs:
+            self.align = kwargs['align']
+
+        hotspot = [self.pos[0], self.pos[1]]
+
+        if 'l' in self.align:
+            hotspot[0] += self.radius
+        elif 'r' in self.align:
+            hotspot[0] -= self.radius
+        if 't' in self.align:
+            hotspot[1] += self.radius
+        elif 'b' in self.align:
+            hotspot[1] -= self.radius
+
+        self.hotspot = tuple(hotspot)
+
+    def draw(self, surface: Any, width: int = 0) -> None:
+        """
+        Draws the shape to surface.
+        :param surface: Any
+        :param width: int
+        :return:
+            - None
+        """
+        pg.draw.circle(surface, self.colour, self.hotspot, self.radius, width)
+
+    def collide(self, pos: tuple, origin: tuple = (0, 0)) -> bool:
+        """
+        Checks if given position collides with the shape.
+        :param pos:  tuple[int, int]
+        :param origin: tuple[int, int]
+        :return:
+            - collide - bool
+        """
+        pos = (pos[0] - origin[0], pos[1] - origin[1])
+
+        if pos[0] in range(int(self.hotspot[0] - self.radius), int(self.hotspot[0] + self.radius)) and \
+                pos[1] in range(int(self.hotspot[1] - self.radius), int(self.hotspot[1] + self.radius)):
+            distance = math.sqrt((pos[0] - self.hotspot[0]) ** 2 + (pos[1] - self.hotspot[1]) ** 2)
+            if distance <= self.radius:
+                return True
+        return False
