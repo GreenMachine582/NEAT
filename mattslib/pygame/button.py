@@ -8,15 +8,20 @@ __version__ = '1.2.1'
 __date__ = '20/03/2022'
 
 
-def changeColour(colour: list, change_by: int) -> list:
+def changeColour(colour: list, change_by: Any) -> list:
     """
     Changes the given colour with value, the clamps the colour ranges.
     :param colour: list[int]
-    :param change_by: int
+    :param change_by: Any
     :return:
         - new_colour - list[int]
     """
-    new_colour = [colour[i] + change_by for i in range(len(colour))]
+    if isinstance(change_by, int):
+        new_colour = [colour[i] + change_by for i in range(len(colour))]
+    elif isinstance(change_by, list):
+        new_colour = [colour[i] + change_by[i] for i in range(len(colour))]
+    else:
+        return colour
     for i in range(len(colour)):
         new_colour[i] = 0 if new_colour[i] < 0 else 255 if new_colour[i] > 255 else new_colour[i]
     return new_colour
