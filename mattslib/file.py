@@ -13,7 +13,7 @@ def read(file_dir: str = '') -> Any | None:
     Reads the given file and checks the extension to
     determine a fit loading method.
     :param file_dir: str
-    :return: 
+    :return:
         - contents - Any | None
     """
     try:
@@ -38,7 +38,7 @@ def write(contents: Any = None, file_dir: str = '') -> None:
     to determine a fit writing method.
     :param contents: Any
     :param file_dir: str
-    :return: 
+    :return:
         - None
     """
     if contents is None:
