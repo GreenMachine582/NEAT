@@ -10,7 +10,7 @@ import mattslib as ml
 import mattslib.pygame as mlpg
 
 __version__ = '1.5'
-__date__ = '19/03/2022'
+__date__ = '20/03/2022'
 
 # Constants
 WIDTH, HEIGHT = 1120, 640
@@ -68,7 +68,13 @@ menu = None
 options = None
 
 
-def calculateFitness(result):
+def calculateFitness(result: int) -> int:
+    """
+    Calculates the fitness with match results in mind.
+    :param result: int
+    :return:
+        - fitness - int
+    """
     fitness = 0
     if result == connect4.current_player:
         fitness += 100
@@ -80,7 +86,12 @@ def calculateFitness(result):
     return fitness
 
 
-def getSpeedShow():
+def getSpeedShow() -> tuple:
+    """
+    Returns that speed and show values depending on neat details.
+    :return:
+        - speed, show - tuple[int, bool]
+    """
     if show_every == 'Generation':
         for player_id in [connect4.current_player, connect4.opponent]:
             if neats[player_id].current_species == 0 and neats[player_id].current_genome == 0:
@@ -88,11 +99,18 @@ def getSpeedShow():
         return evolution_speed, False
     elif show_every == 'None':
         return evolution_speed, False
-    else:
-        return game_speed, True
+    return game_speed, True
 
 
-def setupAi(player_id, inputs=4, outputs=1):
+def setupAi(player_id: int, inputs: int = 4, outputs: int = 1) -> NEAT:
+    """
+    Sets up neat with game settings in mind.
+    :param player_id: int
+    :param inputs: int
+    :param outputs: int
+    :return:
+        - neat - NEAT
+    """
     if players[player_id] == PLAYER_TYPES[1]:
         if os.path.isfile(f"{DIRECTORY}\\{GAME}\\ai_{player_id}.neat"):
             neat = NEAT.load(f"ai_{player_id}", f"{DIRECTORY}\\{GAME}")
@@ -106,7 +124,12 @@ def setupAi(player_id, inputs=4, outputs=1):
     return neat
 
 
-def setup():
+def setup() -> None:
+    """
+    Sets up the global variables and neat players.
+    :return:
+        - None
+    """
     global connect4, network, info, menu, options, players, neats
     connect4 = Connect4()
     network = Network()
@@ -120,7 +143,12 @@ def setup():
             neats[player_id] = None
 
 
-def close():
+def close() -> None:
+    """
+    Closes and quits pygame and python.
+    :return:
+        - None
+    """
     pg.quit()
     quit()
 
@@ -175,6 +203,9 @@ class Network:
 
 
 class Info:
+    """
+    Info is a class that handles updating and drawing the neat information.
+    """
     BOARDER = 20
 
     def __init__(self):
@@ -183,34 +214,44 @@ class Info:
         self.colour = {'background': [200, 200, 200]}
 
         self.header = {}
-        self.data = {}
 
-        self.generate()
+        self.header = {'generation': mlpg.Message("Generation:", (self.BOARDER, self.BOARDER), align='ml'),
+                       'specie': mlpg.Message("Species:", (self.BOARDER, INFO_HEIGHT - self.BOARDER), align='ml'),
+                       'genome': mlpg.Message(":Genome", (INFO_WIDTH - self.BOARDER, self.BOARDER), align='mr'),
+                       'fitness': mlpg.Message(":Fitness", (INFO_WIDTH - self.BOARDER, INFO_HEIGHT - self.BOARDER),
+                                               align='mr')}
+        self.data = {'generation': mlpg.Message(0, (150, self.BOARDER), align='ml'),
+                     'species': mlpg.Message(0, (150, INFO_HEIGHT - self.BOARDER), align='ml'),
+                     'genome': mlpg.Message(0, (360, self.BOARDER), align='mr'),
+                     'fitness': mlpg.Message(0, (360, INFO_HEIGHT - self.BOARDER), align='mr')}
 
-    def generate(self):
-        self.header['generation'] = mlpg.Message("Generation:", (self.BOARDER, self.BOARDER), align='ml')
-        self.header['specie'] = mlpg.Message("Species:", (self.BOARDER, INFO_HEIGHT - self.BOARDER), align='ml')
-        self.header['genome'] = mlpg.Message(":Genome", (INFO_WIDTH - self.BOARDER, self.BOARDER), align='mr')
-        self.header['fitness'] = mlpg.Message(":Fitness", (INFO_WIDTH - self.BOARDER, INFO_HEIGHT - self.BOARDER),
-                                              align='mr')
-        self.data['generation'] = mlpg.Message(0, (150, self.BOARDER), align='ml')
-        self.data['species'] = mlpg.Message(0, (150, INFO_HEIGHT - self.BOARDER), align='ml')
-        self.data['genome'] = mlpg.Message(0, (360, self.BOARDER), align='mr')
-        self.data['fitness'] = mlpg.Message(0, (360, INFO_HEIGHT - self.BOARDER), align='mr')
+    def update(self, neat_info: dict) -> None:
+        """
+        Updates the data texts with neat information.
+        :param neat_info: dict[str: int]
+        :return:
+            - None
+        """
+        if self.active:
+            self.data['generation'].update(text=neat_info['generation'])
+            self.data['species'].update(text=neat_info['current_species'])
+            self.data['genome'].update(text=neat_info['current_genome'])
+            self.data['fitness'].update(text=neat_info['fitness'])
 
-    def update(self, neat_info):
-        self.data['generation'].update(text=neat_info['generation'])
-        self.data['species'].update(text=neat_info['current_species'])
-        self.data['genome'].update(text=neat_info['current_genome'])
-        self.data['fitness'].update(text=neat_info['fitness'])
+    def draw(self, surface: Any) -> None:
+        """
+        Draws the background and neat information to the given surface.
+        :param surface: Any
+        :return:
+            - None
+        """
+        if self.visible:
+            surface.fill(self.colour['background'])
+            for text_key in self.header:
+                self.header[text_key].draw(surface)
 
-    def draw(self, window):
-        window.fill(self.colour['background'])
-        for text_key in self.header:
-            self.header[text_key].draw(window)
-
-        for text_key in self.data:
-            self.data[text_key].draw(window)
+            for text_key in self.data:
+                self.data[text_key].draw(surface)
 
 
 class Menu:
@@ -244,7 +285,7 @@ class Menu:
 
     def draw(self, surface: Any) -> None:
         """
-        Draws the background and buttons to the given surface
+        Draws the background and buttons to the given surface.
         :param surface: Any
         :return:
             - None
