@@ -93,7 +93,7 @@ class Circle:
     given environment.
     """
 
-    def __init__(self, pos: tuple, colour: list, radius: float, align: str):
+    def __init__(self, pos: tuple, colour: list, radius: float, align: str = ''):
         """
         Initiates the Circle object with given values.
         :param pos: tuple[float, float]
