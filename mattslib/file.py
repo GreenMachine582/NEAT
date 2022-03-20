@@ -52,7 +52,7 @@ def write(contents: Any = None, file_dir: str = '') -> None:
                 if not isinstance(contents, dict):
                     json.dump(contents.__dict__, file)
                 else:
-                    json.dump(contents, file)
+                    json.dump(contents, file, indent=4)
         else:
             with open(file_dir, 'wb') as file:
                 pickle.dump(contents, file, pickle.HIGHEST_PROTOCOL)
