@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pygame as pg
 from .message import Message
-from .shape import Rect
+from .shape import Rect, Circle
 
 __version__ = '1.2.1'
 __date__ = '19/03/2022'
@@ -51,8 +51,8 @@ class Button:
             height = 70 if self.message.text_rect[3] <= 60 else self.message.text_rect[3] + 20
             self.dims = [width, height]
 
-        self.button_rect = Rect(self.pos, self.align, self.dims, self.colour)
-        self.button_boarder = Rect(self.pos, self.align, self.dims, self.colour)
+        self.button_rect = Rect(self.pos, self.colour, self.dims, self.align)
+        self.button_boarder = Rect(self.pos, self.colour, self.dims, self.align)
 
         self.update()
 
