@@ -130,7 +130,7 @@ class NEAT(object):
     def generate(self, inputs: int, outputs: int, population: int = 100) -> None:
         """
         Generates the NEAT with given values and classifies the genomes
-         into species.
+        into species.
         :param inputs: int
         :param outputs: int
         :param population: int
@@ -149,8 +149,8 @@ class NEAT(object):
 
     def classifyGenome(self, genome: Genome) -> None:
         """
-        Classifies the genome and groups it with similar species or creates
-         a new specie.
+        Classifies the genome and groups it with first similar species or creates
+        a new specie.
         :param genome: Genome
         :return:
             - None
@@ -163,13 +163,14 @@ class NEAT(object):
                 if distance <= self.settings.delta_genome_threshold:
                     specie.members.append(genome)
                     classified = True
+                    break
         if not classified:
             self.species.append(Specie(self.settings.max_fitness_history, [genome]))
 
     def updateFitness(self) -> None:
         """
         Updates the best fitness and genome from leading genomes within
-         each specie.
+        each specie.
         :return:
             - None
         """
@@ -210,7 +211,7 @@ class NEAT(object):
     def killPopulation(self) -> None:
         """
         Removes species that had unfavorable fitness results and then removes
-         a portion of genomes.
+        a portion of genomes.
         :return:
             - None
         """
@@ -226,7 +227,7 @@ class NEAT(object):
     def repopulate(self, fitness_sum: int | float) -> None:
         """
         Repopulates the population by breeding new child genomes, clones the
-         best genome or creates fresh genomes.
+        best genome or creates fresh genomes.
         :param fitness_sum: int | float
         :return:
             - None
@@ -247,7 +248,7 @@ class NEAT(object):
     def evolve(self) -> None:
         """
         Updates the fitness for each specie, if no progress has been made then
-         mutate, else kill a portion of the population and repopulate.
+        mutate, else kill a portion of the population and repopulate.
         :return:
             - None
         """
@@ -268,7 +269,7 @@ class NEAT(object):
     def shouldEvolve(self) -> bool:
         """
         Checks the settings if the current NEAT meets requirements to
-         continue evolving.
+        continue evolving.
         :return:
             - bool - True | False
         """
@@ -281,7 +282,7 @@ class NEAT(object):
     def nextGenome(self, filename: str = '') -> None:
         """
         Gets the next genome in population, updates counters and
-         saves models at certain intervals.
+        saves models at certain intervals.
         :param filename: str
         :return:
             - None
@@ -291,6 +292,7 @@ class NEAT(object):
         if self.current_genome < len(specie.members) - 1:
             self.current_genome += 1
         else:
+            self.current_genome = 0
             if self.current_species < len(self.species) - 1:
                 self.current_species += 1
             else:
@@ -298,7 +300,6 @@ class NEAT(object):
                     self.save(f"{filename}_gen_{self.generation + 1}")
                 self.evolve()
                 self.current_species = 0
-            self.current_genome = 0
 
     def getGenome(self, specie: int = None, genome: int = None) -> Genome:
         """
