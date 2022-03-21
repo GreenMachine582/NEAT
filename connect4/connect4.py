@@ -1,36 +1,36 @@
+from __future__ import annotations
 
-import random
-
-import mattslib as ml
 import mattslib.pygame as mlpg
 
-__version__ = '1.5'
+__version__ = '1.5.1'
 __date__ = '21/03/2022'
 
 # Constants
 WIDTH, HEIGHT = 1120, 640
 GAME_WIDTH, GAME_HEIGHT = HEIGHT, HEIGHT
 
-# Colors
-BLACK = [0, 0, 0]
-WHITE = [255, 255, 255]
-GREY = [200, 200, 200]
-RED = [255, 0, 0]
-GREEN = [0, 255, 0]
-BLUE = [0, 0, 255]
-YELLOW = [255, 255, 0]
-
 
 class Piece:
+    """
+    Piece is a players coloured move on the game board.
+    """
+
     BOARDER = 38
     TOP_PADDING = 80
     SPACING = 10
 
-    def __init__(self, coordinates, rows, cols, colour):
+    def __init__(self, coordinates: tuple, rows: int, cols: int, colour: list):
+        """
+        Initiates the object with required values.
+        :param coordinates: tuple[int, int]
+        :param rows: int
+        :param cols: int
+        :param colour: list[int]
+        """
         self.coordinates = coordinates
         self.radius = 30
 
-        self.active = False
+        self.active = True
         self.show = True
         self.colour = colour
 
@@ -43,12 +43,17 @@ class Piece:
 
         self.update()
 
-    def update(self, **kwargs):
+    def update(self, **kwargs: Any) -> None:
+        """
+        Updates relevant attributes.
+        :param kwargs: Any
+        :return:
+            - None
+        """
         if 'colour' in kwargs:
             self.colour = kwargs['colour']
             self.circle.update(colour=self.colour)
-            self.circle_boarder.update(colour=mlpg.changeColour(kwargs['colour'], -70))
-            self.active = True
+            self.circle_boarder.update(colour=mlpg.changeColour(self.colour, -70))
         if 'highlight_colour' in kwargs:
             self.circle_boarder.update(colour=mlpg.changeColour(kwargs['highlight_colour'], -70))
         if 'active' in kwargs:
@@ -56,16 +61,29 @@ class Piece:
         if 'show' in kwargs:
             self.show = kwargs['show']
 
-    def draw(self, surface, width=5):
+    def draw(self, surface: Any, width: int = 5) -> None:
+        """
+        Draws the piece to the given game board.
+        :param surface: Any
+        :param width: int
+        :return:
+            - None
+        """
         if self.show:
             self.circle.draw(surface)
             self.circle_boarder.draw(surface, width)
 
 
 class Connect4:
+    """
+    Connect 4 is a 2 player game where the piece colours are red and yellow. This
+    object handles all related features of a normal connect 4 game.
+    """
+
     ROWS, COLUMNS = 6, 7
-    PLAYERS = {1: RED, 2: YELLOW}
-    EMPTY = WHITE
+    PLAYERS = {1: 'Red', 2: "Yellow"}
+    COLOURS = {1: mlpg.RED, 2: mlpg.YELLOW}
+    EMPTY = mlpg.WHITE
     INVALID_MOVE = -2
     LENGTH = 4
     GAME_STATES = {-2: 'Invalid move', -1: '', 0: 'Draw', 1: 'Player 1 Wins', 2: 'Player 2 Wins'}
@@ -75,29 +93,43 @@ class Connect4:
         self.board = []
         self.active = True
         self.visible = True
-        self.colour = {'background': BLUE}
+        self.colour = {'background': mlpg.BLUE}
+
         self.current_player = 1
-        self.opponent = 2 if self.current_player == 1 else 1
+        self.opponent = 2
         self.match = True
         self.turn = 0
 
         self.board_background = mlpg.Rect((GAME_WIDTH / 2, GAME_HEIGHT / 2), self.colour['background'],
                                           [GAME_WIDTH - (self.BOARDER * 2), GAME_HEIGHT - (self.BOARDER * 2)])
-        self.player_text = mlpg.Message(f"Player {self.current_player}'s turn!", (int(GAME_WIDTH / 2), 60), size=40)
+        self.player_text = mlpg.Message(f"{self.PLAYERS[self.current_player]}'s turn!",
+                                        (GAME_WIDTH / 2, 60), size=40)
 
-        self.board = [[Piece([h, j], self.ROWS, self.COLUMNS, self.EMPTY) for j in range(self.COLUMNS)]
+        self.board = [[Piece((h, j), self.ROWS, self.COLUMNS, self.EMPTY) for j in range(self.COLUMNS)]
                       for h in range(self.ROWS)]
 
-    def reset(self):
-        self.board = [[Piece([h, j], self.ROWS, self.COLUMNS, self.EMPTY) for j in range(self.COLUMNS)]
-                      for h in range(self.ROWS)]
+    def reset(self) -> None:
+        """
+        Resets specific connect4 attributes for next match.
+        :return:
+            - None
+        """
+        for h in range(self.ROWS):
+            for j in range(self.COLUMNS):
+                self.board[h][j].update(colour=self.EMPTY)
         self.match = True
         self.turn = 0
         self.current_player = 1
-        self.opponent = 2 if self.current_player == 1 else 1
+        self.opponent = 2
 
-    def draw(self, surface):
-        self.player_text.update(text=f"Player {self.current_player}'s turn!")
+    def draw(self, surface: Any) -> None:
+        """
+        Draws the game board and pieces to the surface.
+        :param surface: Any
+        :return:
+            - None
+        """
+        self.player_text.update(text=f"{self.PLAYERS[self.current_player]}'s turn!")
 
         surface.fill(mlpg.changeColour(self.colour['background'], -70))
         self.board_background.draw(surface)
@@ -106,24 +138,6 @@ class Connect4:
             for piece in row:
                 piece.draw(surface)
 
-    def neatMove(self, genome):
-        possible_moves = {}
-        for i in range(self.COLUMNS):
-            possible_move = self.getPossibleMove(i)
-            if possible_move[0] != -2:
-                possible_moves[possible_move] = 0
-        for possible_move in possible_moves:
-            directions, _ = self.getPieceSlices(possible_move)
-            for direction_pair in directions:
-                for direction in directions[direction_pair]:
-                    if directions[direction_pair][direction] is not None:
-                        inputs = directions[direction_pair][direction]
-                        possible_moves[possible_move] += genome.forward(inputs)[0]
-        sorted_moves = ml.dict.combineByValues(possible_moves)
-        max_min_keys = ml.list.findMaxMin(list(sorted_moves.keys()))
-        move = random.choice(sorted_moves[max_min_keys['max']['value']])
-        return move
-
     def makeMove(self, move: tuple) -> None:
         """
         Receives the move to update the game board and increments turn.
@@ -131,7 +145,7 @@ class Connect4:
         :return:
             - None
         """
-        self.board[move[0]][move[1]].update(colour=self.PLAYERS[self.current_player])
+        self.board[move[0]][move[1]].update(colour=self.COLOURS[self.current_player])
         self.turn += 1
 
     def getPossibleMove(self, possible_move: int) -> tuple:
@@ -143,19 +157,27 @@ class Connect4:
         """
         move = self.INVALID_MOVE
         for row in range(self.ROWS):
-            if self.board[row][possible_move].active:
+            if self.board[row][possible_move].colour != self.EMPTY:
                 break
             move = row
         return move, possible_move
 
-    def showWin(self, move, direction_pair, colour):
+    def showWin(self, move: tuple, direction_pair: list, colour: list) -> None:
+        """
+        Shows the connections made with move that result in a win.
+        :param move: tuple[int, int]
+        :param direction_pair: list[tuple[int, int]]
+        :param colour: list[int]
+        :return:
+            - None
+        """
         self.board[move[0]][move[1]].update(highlight_colour=colour)
         for direction in direction_pair:
             for n in range(1, self.LENGTH):
                 a, b = move[0] + (n * direction[0]), move[1] + (n * direction[1])
                 if 0 <= a < self.ROWS and 0 <= b < self.COLUMNS:
                     piece = self.board[a][b]
-                    if piece.colour == self.PLAYERS[self.current_player]:
+                    if piece.colour == self.COLOURS[self.current_player]:
                         self.board[a][b].update(highlight_colour=colour)
                     else:
                         break
@@ -165,13 +187,19 @@ class Connect4:
     def switchPlayer(self) -> None:
         """
         Switches the current player with opponent.
-        :return: 
+        :return:
             - None
         """
-        self.current_player = 2 if self.current_player == 1 else 1
+        self.current_player = self.opponent
         self.opponent = 2 if self.current_player == 1 else 1
 
-    def getPieceSlices(self, move):
+    def getPieceSlices(self, move: tuple) -> tuple:
+        """
+        Gets the piece slices around the move and counts connecting pieces.
+        :param move: tuple[int, int]
+        :return:
+            - directions, counts - tuple[dict[str: dict[tuple[int, int]: list[int]]], dict[tuple[int, int]: int]]
+        """
         # don't need to check up
         directions = {'vertical': {(1, 0): [], (-1, 0): None},
                       'horizontal': {(0, 1): [], (0, -1): []},
@@ -189,13 +217,13 @@ class Connect4:
                         a, b = move[0] + (n * direction[0]), move[1] + (n * direction[1])
                         if 0 <= a < self.ROWS and 0 <= b < self.COLUMNS:
                             piece = self.board[a][b]
-                            if piece.colour == self.PLAYERS[self.current_player]:
+                            if piece.colour == self.COLOURS[self.current_player]:
                                 directions[direction_pair][direction].append(self.current_player)
                                 if count_connections:
                                     connection_count += 1
                             else:
                                 count_connections = False
-                                if piece.colour == self.PLAYERS[self.opponent]:
+                                if piece.colour == self.COLOURS[self.opponent]:
                                     directions[direction_pair][direction].append(self.opponent)
                                 elif piece.colour == self.EMPTY:
                                     directions[direction_pair][direction].append(0)
@@ -209,7 +237,7 @@ class Connect4:
         """
         Checks the connections with move for a win, draw or nothing and updates match status.
         :param move: tuple[int, int]
-        :return: 
+        :return:
             - result - int
         """
         draw, win = True, False
@@ -217,7 +245,7 @@ class Connect4:
         directions, counts = self.getPieceSlices(move)
         for direction_pair in counts:
             if sum(counts[direction_pair]) >= self.LENGTH - 1:
-                self.showWin(move, directions[direction_pair], GREEN)
+                self.showWin(move, directions[direction_pair], mlpg.GREEN)
                 win = True
         if win:
             self.match = False
