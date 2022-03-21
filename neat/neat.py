@@ -10,7 +10,7 @@ from mattslib.dict import countOccurrence
 from mattslib.file import read, write
 
 __version__ = '1.5.1'
-__date__ = '19/03/2022'
+__date__ = '21/03/2022'
 
 
 def genomicDistance(x_member: Genome, y_member: Genome, distance_weights: dict) -> float:
@@ -295,7 +295,6 @@ class NEAT(object):
                 self.current_species += 1
             else:
                 if self.generation + 1 in self.settings.save_intervals:
-                    print(f"Saving - {filename}_gen_{self.generation + 1}.neat")
                     self.save(f"{filename}_gen_{self.generation + 1}")
                 self.evolve()
                 self.current_species = 0
