@@ -117,7 +117,13 @@ def setupAi(player_id: int, inputs: int = 4, outputs: int = 1) -> NEAT:
     return neat
 
 
-def neatMove(genome):
+def neatMove(genome: Genome) -> int:
+    """
+    Calculates the best move for the current genome to make.
+    :param genome: Genome
+    :return:
+        - move - int
+    """
     possible_moves = {}
     for i in range(connect4.COLUMNS):
         possible_move = connect4.getPossibleMove(i)
@@ -165,6 +171,10 @@ def close() -> None:
 
 
 class Network:
+    """
+    Creates and draws the visual of the current genome in a neural network form.
+    """
+    
     BOARDER = 40
     SPACING = 1
 
@@ -176,9 +186,15 @@ class Network:
                        'active': mlpg.GREEN, 'deactivated': mlpg.RED}
         self.network = {}
         self.radius = 5
-        self.diameter = self.radius * 2
 
-    def generate(self, current_genome, width=None, height=None):
+    def generate(self, current_genome: Genome, width: int | float = None, height: int | float = None) -> None:
+        """
+        Creates the neural network visual of the current genome.
+        :param current_genome: 
+        :param width: 
+        :param height: 
+        :return: 
+        """
         if width is None:
             width = NETWORK_WIDTH - (2 * self.BOARDER)
         if height is None:
@@ -203,14 +219,20 @@ class Network:
                           'thickness': int(max(3, min(abs(connections[pos].weight), 1)))}
             self.network[pos[0]]['connections'].append(connection)
 
-    def draw(self, window):
-        window.fill(self.colour['background'])
+    def draw(self, surface: Any) -> None:
+        """
+        Draws the neural network of the current genome.
+        :param surface: Any
+        :return: 
+            - None
+        """
+        surface.fill(self.colour['background'])
         for node in self.network:
             for connection in self.network[node]['connections']:
-                pg.draw.line(window, connection['colour'], connection['start'], connection['end'],
+                pg.draw.line(surface, connection['colour'], connection['start'], connection['end'],
                              connection['thickness'])
         for node in self.network:
-            pg.draw.circle(window, self.network[node]['colour'], self.network[node]['pos'], self.radius)
+            pg.draw.circle(surface, self.network[node]['colour'], self.network[node]['pos'], self.radius)
 
 
 class Info:
