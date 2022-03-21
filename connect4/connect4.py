@@ -1,12 +1,11 @@
 
-import pygame as pg
 import random
 
 import mattslib as ml
 import mattslib.pygame as mlpg
 
 __version__ = '1.5'
-__date__ = '20/03/2022'
+__date__ = '21/03/2022'
 
 # Constants
 WIDTH, HEIGHT = 1120, 640
@@ -67,9 +66,10 @@ class Connect4:
     ROWS, COLUMNS = 6, 7
     PLAYERS = {1: RED, 2: YELLOW}
     EMPTY = WHITE
+    INVALID_MOVE = -2
     LENGTH = 4
     GAME_STATES = {-2: 'Invalid move', -1: '', 0: 'Draw', 1: 'Player 1 Wins', 2: 'Player 2 Wins'}
-    BOARDER = 0
+    BOARDER = 10
 
     def __init__(self):
         self.board = []
@@ -80,6 +80,10 @@ class Connect4:
         self.opponent = 2 if self.current_player == 1 else 1
         self.match = True
         self.turn = 0
+
+        self.board_background = mlpg.Rect((GAME_WIDTH / 2, GAME_HEIGHT / 2), self.colour['background'],
+                                          [GAME_WIDTH - (self.BOARDER * 2), GAME_HEIGHT - (self.BOARDER * 2)])
+        self.player_text = mlpg.Message(f"Player {self.current_player}'s turn!", (int(GAME_WIDTH / 2), 60), size=40)
 
         self.board = [[Piece([h, j], self.ROWS, self.COLUMNS, self.EMPTY) for j in range(self.COLUMNS)]
                       for h in range(self.ROWS)]
@@ -92,22 +96,22 @@ class Connect4:
         self.current_player = 1
         self.opponent = 2 if self.current_player == 1 else 1
 
-    def draw(self, window, boarder=10):
-        window.fill(mlpg.changeColour(self.colour['background'], -70))
-        pg.draw.rect(window, self.colour['background'], ([boarder, boarder],
-                                                         [GAME_WIDTH - (boarder * 2), GAME_HEIGHT - (boarder * 2)]))
-        message = mlpg.Message(f"Player {self.current_player}'s turn!", (int(GAME_WIDTH / 2), 60), size=40)
-        message.draw(window)
+    def draw(self, surface):
+        self.player_text.update(text=f"Player {self.current_player}'s turn!")
+
+        surface.fill(mlpg.changeColour(self.colour['background'], -70))
+        self.board_background.draw(surface)
+        self.player_text.draw(surface)
         for row in self.board:
             for piece in row:
-                piece.draw(window)
+                piece.draw(surface)
 
     def neatMove(self, genome):
         possible_moves = {}
         for i in range(self.COLUMNS):
             possible_move = self.getPossibleMove(i)
-            if possible_move is not None:
-                possible_moves[tuple(possible_move)] = 0
+            if possible_move[0] != -2:
+                possible_moves[possible_move] = 0
         for possible_move in possible_moves:
             directions, _ = self.getPieceSlices(possible_move)
             for direction_pair in directions:
@@ -120,23 +124,29 @@ class Connect4:
         move = random.choice(sorted_moves[max_min_keys['max']['value']])
         return move
 
-    def makeMove(self, move):
-        if move is not None:
-            self.board[move[0]][move[1]].update(colour=self.PLAYERS[self.current_player])
-            self.turn += 1
-        game_state = self.winChecker(move) if move is not None else -2
-        return game_state
+    def makeMove(self, move: tuple) -> None:
+        """
+        Receives the move to update the game board and increments turn.
+        :param move: tuple[int, int]
+        :return:
+            - None
+        """
+        self.board[move[0]][move[1]].update(colour=self.PLAYERS[self.current_player])
+        self.turn += 1
 
-    def getPossibleMove(self, possible_move):
-        move = None
-        for h in range(self.ROWS):
-            if not self.board[h][possible_move].active:
-                move = h
-            else:
+    def getPossibleMove(self, possible_move: int) -> tuple:
+        """
+        Checks each row with given column in board for an available move.
+        :param possible_move: int
+        :return:
+            - move - tuple[int, int]
+        """
+        move = self.INVALID_MOVE
+        for row in range(self.ROWS):
+            if self.board[row][possible_move].active:
                 break
-        if move is None:
-            return None
-        return [move, possible_move]
+            move = row
+        return move, possible_move
 
     def showWin(self, move, direction_pair, colour):
         self.board[move[0]][move[1]].update(highlight_colour=colour)
@@ -152,7 +162,12 @@ class Connect4:
                 else:
                     break
 
-    def switchPlayer(self):
+    def switchPlayer(self) -> None:
+        """
+        Switches the current player with opponent.
+        :return: 
+            - None
+        """
         self.current_player = 2 if self.current_player == 1 else 1
         self.opponent = 2 if self.current_player == 1 else 1
 
@@ -190,7 +205,13 @@ class Connect4:
                 counts[direction_pair].append(connection_count)
         return directions, counts
 
-    def winChecker(self, move):
+    def winChecker(self, move: tuple) -> int:
+        """
+        Checks the connections with move for a win, draw or nothing and updates match status.
+        :param move: tuple[int, int]
+        :return: 
+            - result - int
+        """
         draw, win = True, False
         
         directions, counts = self.getPieceSlices(move)
@@ -199,6 +220,7 @@ class Connect4:
                 self.showWin(move, directions[direction_pair], GREEN)
                 win = True
         if win:
+            self.match = False
             return self.current_player
 
         for row in self.board:
@@ -206,4 +228,24 @@ class Connect4:
                 if piece.colour == self.EMPTY:
                     draw = False
 
-        return 0 if draw else -1
+        if draw:
+            self.match = False
+            return 0
+        return -1
+
+    def main(self, possible_move: int) -> int:
+        """
+        Checks for possible moves, makes the move, checks board status and then
+        switches player turn.
+        :param possible_move: int
+        :return:
+            - result - int
+        """
+        move = self.getPossibleMove(possible_move)
+        if move[0] != self.INVALID_MOVE:
+            self.makeMove(move)
+            result = self.winChecker(move)
+            if self.match:
+                self.switchPlayer()
+            return result
+        return self.INVALID_MOVE
