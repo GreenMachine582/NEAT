@@ -8,5 +8,5 @@ setup(
     url='https://github.com/greenmachine1902/NEAT',
     license="BSD",
     description='NEAT (NeuroEvolution of Augmenting Topologies) implementation',
-    packages=['neat'],
+    packages=['connect4', 'mattslib', 'neat'],
 )
