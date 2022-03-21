@@ -78,9 +78,10 @@ def calculateFitness(result: int) -> int:
     return fitness
 
 
-def getSpeedShow(cp) -> tuple:
+def getSpeedShow(cp: int) -> tuple:
     """
     Returns that speed and show values depending on neat details.
+    :param cp: int
     :return:
         - speed, show - tuple[int, bool]
     """
