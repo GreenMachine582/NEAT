@@ -34,24 +34,27 @@ DIRECTORY = os.path.dirname(os.path.realpath(__file__))
 # Globals - Defaults
 players = {1: PLAYER_TYPES[1], 2: PLAYER_TYPES[1]}
 neats = {1: None, 2: None}
-show_every = SHOW_EVERY[1]
-game_speed = SPEEDS[-1]
+show_every = SHOW_EVERY[0]
+game_speed = SPEEDS[1]
 evolution_speed = SPEEDS[-1]
 max_fps = max(FPS, max(game_speed, evolution_speed))
 
-# Globals - Pygame
-os.environ['SDL_VIDEO_WINDOW_POS'] = "0,25"
-pg.init()
-display = pg.display.set_mode((WIDTH, HEIGHT), depth=32)
+display = True
 
-pg.display.set_caption("Connect 4 with NEAT - v" + __version__)
-game_display = pg.Surface(GAME_PANEL)
-network_display = pg.Surface((NETWORK_WIDTH, NETWORK_HEIGHT))
-info_display = pg.Surface((INFO_WIDTH, INFO_HEIGHT))
-menu_display = pg.Surface((MENU_WIDTH, MENU_HEIGHT))
-options_display = pg.Surface((OPTION_WIDTH, OPTION_HEIGHT))
-display.fill(mlpg.BLACK)
-clock = pg.time.Clock()
+# Globals - Pygame
+if display:
+    os.environ['SDL_VIDEO_WINDOW_POS'] = "0,25"
+    pg.init()
+    display = pg.display.set_mode((WIDTH, HEIGHT), depth=32)
+
+    pg.display.set_caption("Connect 4 with NEAT - v" + __version__)
+    game_display = pg.Surface(GAME_PANEL)
+    network_display = pg.Surface((NETWORK_WIDTH, NETWORK_HEIGHT))
+    info_display = pg.Surface((INFO_WIDTH, INFO_HEIGHT))
+    menu_display = pg.Surface((MENU_WIDTH, MENU_HEIGHT))
+    options_display = pg.Surface((OPTION_WIDTH, OPTION_HEIGHT))
+    display.fill(mlpg.BLACK)
+    clock = pg.time.Clock()
 
 connect4 = Connect4()
 network = None
@@ -60,21 +63,19 @@ menu = None
 options = None
 
 
-def calculateFitness(result: int) -> int:
+def calculateFitness(win_lose: str) -> int:
     """
-    Calculates the fitness with match results in mind.
-    :param result: int
+    Calculates the fitness with match results.
+    :param win_lose: str
     :return:
         - fitness - int
     """
-    fitness = 0
-    if result == connect4.player_ids[connect4.current_player - 1]:
-        fitness += 100
-    elif result == 0:
-        fitness += 25
-    elif result == connect4.player_ids[connect4.opponent - 1]:
-        fitness -= 100
-    fitness -= connect4.turn
+    fitness = (connect4.ROWS * connect4.COLUMNS) - connect4.turn
+    if connect4.result == connect4.current_player:
+        if win_lose == 'win':
+            fitness += 50
+        elif win_lose == 'lose':
+            fitness = 0
     return fitness
 
 
@@ -491,36 +492,36 @@ def main() -> None:
 
         possible_move = None
         mouse_clicked = False
-        for event in pg.event.get():
-            if event.type == pg.QUIT:
-                close()
-            if event.type == pg.MOUSEBUTTONDOWN:
-                mouse_clicked = True
-            if event.type == pg.KEYDOWN:
-                if event.key == pg.K_ESCAPE:
+        if display:
+            for event in pg.event.get():
+                if event.type == pg.QUIT:
                     close()
-                if connect4.match and players[cp] == PLAYER_TYPES[0]:
-                    if event.key in [pg.K_1, pg.K_KP1]:
-                        possible_move = 0
-                    elif event.key in [pg.K_2, pg.K_KP2]:
-                        possible_move = 1
-                    elif event.key in [pg.K_3, pg.K_KP3]:
-                        possible_move = 2
-                    elif event.key in [pg.K_4, pg.K_KP4]:
-                        possible_move = 3
-                    elif event.key in [pg.K_5, pg.K_KP5]:
-                        possible_move = 4
-                    elif event.key in [pg.K_6, pg.K_KP6]:
-                        possible_move = 5
-                    elif event.key in [pg.K_7, pg.K_KP7]:
-                        possible_move = 6
-            if possible_move is not None:
-                break
+                if event.type == pg.MOUSEBUTTONDOWN:
+                    mouse_clicked = True
+                if event.type == pg.KEYDOWN:
+                    if event.key == pg.K_ESCAPE:
+                        close()
+                    if connect4.match and players[cp] == PLAYER_TYPES[0]:
+                        if event.key in [pg.K_1, pg.K_KP1]:
+                            possible_move = 0
+                        elif event.key in [pg.K_2, pg.K_KP2]:
+                            possible_move = 1
+                        elif event.key in [pg.K_3, pg.K_KP3]:
+                            possible_move = 2
+                        elif event.key in [pg.K_4, pg.K_KP4]:
+                            possible_move = 3
+                        elif event.key in [pg.K_5, pg.K_KP5]:
+                            possible_move = 4
+                        elif event.key in [pg.K_6, pg.K_KP6]:
+                            possible_move = 5
+                        elif event.key in [pg.K_7, pg.K_KP7]:
+                            possible_move = 6
+                if possible_move is not None:
+                    break
 
-        mouse_pos = pg.mouse.get_pos()
-        menu.update(mouse_pos, mouse_clicked)
+            mouse_pos = pg.mouse.get_pos()
+            menu.update(mouse_pos, mouse_clicked)
 
-        result = None
         if connect4.match:
             if players[cp] != PLAYER_TYPES[0]:
                 if frame_count >= max_fps / speed:
@@ -535,43 +536,46 @@ def main() -> None:
                         close()
 
                     possible_move = neatMove(current_genome)
-                    result = connect4.main(possible_move)
+                    connect4.main(possible_move)
 
-                    if show:
+                    if show and display:
                         network.generate(current_genome)
                         info.update(neats[cp].getInfo())
 
             elif players[cp] == PLAYER_TYPES[0]:
                 if possible_move is not None:
-                    result = connect4.main(possible_move)
+                    connect4.main(possible_move)
                     if not connect4.match:
                         frame_count = 1
 
         if not connect4.match:
             if frame_count >= max_fps / speed:
-                for player_key in players:
+                yeet = ['win', 'lose']
+                for i, player_key in enumerate([cp, connect4.opponent]):
                     if players[player_key] == PLAYER_TYPES[1]:
                         current_genome = neats[player_key].getGenome()
-                        current_genome.fitness = calculateFitness(result)
+                        fitness = calculateFitness(yeet[i])
+                        current_genome.fitness = fitness
                         neats[player_key].nextGenome(f"ai_{player_key}")
                 connect4.player_ids.reverse()
                 connect4.reset()
 
-        menu.draw(menu_display)
-        display.blit(menu_display, (GAME_PANEL[0], GAME_PANEL[1] - MENU_HEIGHT))
+        if display:
+            menu.draw(menu_display)
+            display.blit(menu_display, (GAME_PANEL[0], GAME_PANEL[1] - MENU_HEIGHT))
 
-        if show or players[cp] == PLAYER_TYPES[0]:
-            connect4.draw(game_display)
-            network.draw(network_display)
-            info.draw(info_display)
+            if show or players[cp] == PLAYER_TYPES[0]:
+                connect4.draw(game_display)
+                network.draw(network_display)
+                info.draw(info_display)
 
-        display.blit(game_display, (0, 0))
-        display.blit(network_display, (GAME_PANEL[0], 0))
-        display.blit(info_display, (GAME_PANEL[0], NETWORK_HEIGHT))
+            display.blit(game_display, (0, 0))
+            display.blit(network_display, (GAME_PANEL[0], 0))
+            display.blit(info_display, (GAME_PANEL[0], NETWORK_HEIGHT))
 
-        pg.display.update()
-        clock.tick(max_fps)
-        frame_count += 1
+            pg.display.update()
+            clock.tick(max_fps)
+            frame_count += 1
 
     close()
 
