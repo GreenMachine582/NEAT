@@ -5,7 +5,7 @@ from .message import Message
 from .shape import Rect, Circle
 
 __version__ = '1.2.1'
-__date__ = '20/03/2022'
+__date__ = '21/03/2022'
 
 
 def changeColour(colour: list, change_by: Any) -> list:
@@ -160,6 +160,7 @@ class ButtonGroup:
         self.align = align
 
         self.active = True
+        self.show = True
 
         self.single_active = single_active
         self.buttons = {}
@@ -192,8 +193,16 @@ class ButtonGroup:
             self.active_colour = kwargs['active_colour']
         if 'button_states' in kwargs:
             self.button_states = kwargs['button_states']
+        if 'active' in kwargs:
+            self.active = kwargs['active']
+            for button_key in self.buttons:
+                self.buttons[button_key].update(active=self.active)
+        if 'show' in kwargs:
+            self.show = kwargs['show']
+            for button_key in self.buttons:
+                self.buttons[button_key].update(show=self.show)
 
-        if mouse_pos is not None:
+        if mouse_pos is not None and self.active:
             for button_key in self.buttons:
                 colour = self.active_colour if self.button_states[button_key] else self.colour
                 action = self.buttons[button_key].update(mouse_pos, mouse_clicked, origin=origin, colour=colour)
