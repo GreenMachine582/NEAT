@@ -97,6 +97,7 @@ def getSpeedShow() -> tuple:
 def setupAi(player_id: int, inputs: int = 4, outputs: int = 1) -> NEAT:
     """
     Sets up neat with game settings in mind.
+    :rtype: object
     :param player_id: int
     :param inputs: int
     :param outputs: int
@@ -148,10 +149,9 @@ def setup() -> None:
     options = Options()
     menu = Menu()
     for player_id in players:
+        neats[player_id] = None
         if players[player_id] != PLAYER_TYPES[0]:
             neats[player_id] = setupAi(player_id)
-        else:
-            neats[player_id] = None
 
 
 def close() -> None:
