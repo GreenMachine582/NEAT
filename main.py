@@ -68,11 +68,11 @@ def calculateFitness(result: int) -> int:
         - fitness - int
     """
     fitness = 0
-    if result == connect4.current_player:
+    if result == connect4.player_ids[connect4.current_player - 1]:
         fitness += 100
     elif result == 0:
         fitness += 25
-    elif result == connect4.opponent:
+    elif result == connect4.player_ids[connect4.opponent - 1]:
         fitness -= 100
     fitness -= connect4.turn
     return fitness
@@ -557,7 +557,7 @@ def main() -> None:
 
         if not connect4.match:
             if frame_count >= max_fps / speed:
-                for player_key in [cp, connect4.opponent]:
+                for player_key in players:
                     if players[player_key] == PLAYER_TYPES[1]:
                         current_genome = neats[player_key].getGenome()
                         current_genome.fitness = calculateFitness(result)
