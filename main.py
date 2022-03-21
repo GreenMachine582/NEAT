@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import pygame as pg
+import random
 
 from connect4 import Connect4
 from neat import NEAT
@@ -10,7 +11,7 @@ import mattslib as ml
 import mattslib.pygame as mlpg
 
 __version__ = '1.5'
-__date__ = '20/03/2022'
+__date__ = '21/03/2022'
 
 # Constants
 WIDTH, HEIGHT = 1120, 640
@@ -29,15 +30,6 @@ SHOW_EVERY = ['Genome', 'Generation', 'None']
 SPEEDS = [1, 5, 25, 100, 500]
 DIRECTORY = os.path.dirname(os.path.realpath(__file__))
 
-# Colors
-BLACK = [0, 0, 0]
-WHITE = [255, 255, 255]
-GREY = [200, 200, 200]
-RED = [255, 0, 0]
-GREEN = [0, 255, 0]
-BLUE = [0, 0, 255]
-YELLOW = [255, 255, 0]
-DARKER = [-65, -65, -65]
 
 # Globals - Defaults
 players = {1: PLAYER_TYPES[1], 2: PLAYER_TYPES[1]}
@@ -58,7 +50,7 @@ network_display = pg.Surface((NETWORK_WIDTH, NETWORK_HEIGHT))
 info_display = pg.Surface((INFO_WIDTH, INFO_HEIGHT))
 menu_display = pg.Surface((MENU_WIDTH, MENU_HEIGHT))
 options_display = pg.Surface((OPTION_WIDTH, OPTION_HEIGHT))
-display.fill(BLACK)
+display.fill(mlpg.BLACK)
 clock = pg.time.Clock()
 
 connect4 = Connect4()
@@ -124,6 +116,25 @@ def setupAi(player_id: int, inputs: int = 4, outputs: int = 1) -> NEAT:
     return neat
 
 
+def neatMove(genome):
+    possible_moves = {}
+    for i in range(connect4.COLUMNS):
+        possible_move = connect4.getPossibleMove(i)
+        if possible_move[0] != connect4.INVALID_MOVE:
+            possible_moves[possible_move] = 0
+    for possible_move in possible_moves:
+        directions, _ = connect4.getPieceSlices(possible_move)
+        for direction_pair in directions:
+            for direction in directions[direction_pair]:
+                if directions[direction_pair][direction] is not None:
+                    inputs = directions[direction_pair][direction]
+                    possible_moves[possible_move] += sum(genome.forward(inputs))
+    sorted_moves = ml.dict.combineByValues(possible_moves)
+    max_min_keys = ml.list.findMaxMin(list(sorted_moves.keys()))
+    move = random.choice(sorted_moves[max_min_keys['max']['value']])
+    return move[1]
+
+
 def setup() -> None:
     """
     Sets up the global variables and neat players.
@@ -160,9 +171,9 @@ class Network:
     def __init__(self):
         self.active = True
         self.visible = True
-        self.colour = {'background': WHITE,
-                       'input': BLUE, 'output': RED, 'hidden': BLACK,
-                       'active': GREEN, 'deactivated': RED}
+        self.colour = {'background': mlpg.WHITE,
+                       'input': mlpg.BLUE, 'output': mlpg.RED, 'hidden': mlpg.BLACK,
+                       'active': mlpg.GREEN, 'deactivated': mlpg.RED}
         self.network = {}
         self.radius = 5
         self.diameter = self.radius * 2
@@ -262,13 +273,14 @@ class Menu:
     BOARDER = 30
 
     def __init__(self):
-        self.colour = {'background': WHITE}
+        self.colour = {'background': mlpg.WHITE}
 
         self.buttons = [
-            mlpg.Button("Reset", (MENU_WIDTH * (1 / 3), MENU_HEIGHT * (1 / 3)), GREY, handler=connect4.reset),
-            mlpg.Button("Options", (MENU_WIDTH * (2 / 3), MENU_HEIGHT * (1 / 3)), GREY, handler=options.main),
-            mlpg.Button("Switch", (MENU_WIDTH * (1 / 3), MENU_HEIGHT * (2 / 3)), GREY, handler=connect4.switchPlayer),
-            mlpg.Button("QUIT", (MENU_WIDTH * (2 / 3), MENU_HEIGHT * (2 / 3)), GREY, handler=close)]
+            mlpg.Button("Reset", (MENU_WIDTH * (1 / 3), MENU_HEIGHT * (1 / 3)), mlpg.GREY, handler=connect4.reset),
+            mlpg.Button("Options", (MENU_WIDTH * (2 / 3), MENU_HEIGHT * (1 / 3)), mlpg.GREY, handler=options.main),
+            mlpg.Button("Switch", (MENU_WIDTH * (1 / 3), MENU_HEIGHT * (2 / 3)), mlpg.GREY,
+                        handler=connect4.switchPlayer),
+            mlpg.Button("QUIT", (MENU_WIDTH * (2 / 3), MENU_HEIGHT * (2 / 3)), mlpg.GREY, handler=close)]
 
         self.update()
 
@@ -299,7 +311,7 @@ class Options:
     BOARDER = 60
 
     def __init__(self):
-        self.colour = {'background': WHITE}
+        self.colour = {'background': mlpg.WHITE}
 
         self.players = {}
         self.buttons = {}
@@ -310,9 +322,9 @@ class Options:
 
     def generate(self):
         self.buttons = {'back': mlpg.Button("Back", (OPTION_WIDTH * (2 / 5), OPTION_HEIGHT * (5 / 6)),
-                                            GREY, handler=True),
+                                            mlpg.GREY, handler=True),
                         'quit': mlpg.Button("QUIT", (OPTION_WIDTH * (3 / 5), OPTION_HEIGHT * (5 / 6)),
-                                            GREY, handler=close)}
+                                            mlpg.GREY, handler=close)}
         self.messages = []
 
         for player_key in players:
@@ -320,7 +332,8 @@ class Options:
             self.group_buttons[f"player_{player_key}"] = mlpg.ButtonGroup(PLAYER_TYPES,
                                                                           (self.BOARDER + (OPTION_WIDTH * (1/6) + 100),
                                                                            self.BOARDER + (len(self.messages) * 90)),
-                                                                          GREY, GREEN, button_states=button_states)
+                                                                          mlpg.GREY, mlpg.GREEN,
+                                                                          button_states=button_states)
             self.messages.append(mlpg.Message(f"Player {player_key}:", (self.BOARDER + (OPTION_WIDTH * (1 / 6)),
                                                                         self.BOARDER + (len(self.messages) * 90)),
                                               align='mr'))
@@ -328,21 +341,21 @@ class Options:
         button_states = [True if speed == game_speed else False for speed in SPEEDS]
         self.group_buttons['game_speed'] = mlpg.ButtonGroup(SPEEDS, (self.BOARDER + (OPTION_WIDTH * (1 / 6)) + 100,
                                                                      self.BOARDER + (len(self.messages) * 90)),
-                                                            GREY, GREEN, button_states=button_states)
+                                                            mlpg.GREY, mlpg.GREEN, button_states=button_states)
         self.messages.append(mlpg.Message(f"Game Speed:", (self.BOARDER + (OPTION_WIDTH * (1 / 6)),
                                                            self.BOARDER + (len(self.messages) * 90)), align='mr'))
 
         button_states = [True if speed == evolution_speed else False for speed in SPEEDS]
         self.group_buttons['evolution_speed'] = mlpg.ButtonGroup(SPEEDS, (self.BOARDER + (OPTION_WIDTH * (1 / 6) + 100),
                                                                           self.BOARDER + (len(self.messages) * 90)),
-                                                                 GREY, GREEN, button_states=button_states)
+                                                                 mlpg.GREY, mlpg.GREEN, button_states=button_states)
         self.messages.append(mlpg.Message(f"Evolution Speed:", (self.BOARDER + (OPTION_WIDTH * (1 / 6)),
                                                                 self.BOARDER + (len(self.messages) * 90)), align='mr'))
 
         button_states = [True if SHOW == show_every else False for SHOW in SHOW_EVERY]
         self.group_buttons['show'] = mlpg.ButtonGroup(SHOW_EVERY, (self.BOARDER + (OPTION_WIDTH * (1 / 6) + 100),
                                                                    self.BOARDER + (len(self.messages) * 90)),
-                                                      GREY, GREEN, button_states=button_states)
+                                                      mlpg.GREY, mlpg.GREEN, button_states=button_states)
         self.messages.append(mlpg.Message(f"Show Every:", (self.BOARDER + (OPTION_WIDTH * (1 / 6)),
                                                            self.BOARDER + (len(self.messages) * 90)), align='mr'))
 
@@ -468,16 +481,11 @@ def main():
                     else:
                         current_genome = neats[cp].best_genome
 
-                    move = connect4.neatMove(current_genome)
-
                     if not neats[cp].shouldEvolve() and players[cp] == PLAYER_TYPES[1]:
                         close()
 
-                    result = connect4.makeMove(move)
-                    if result != -1:
-                        connect4.match = False
-                    else:
-                        connect4.switchPlayer()
+                    possible_move = neatMove(current_genome)
+                    result = connect4.main(possible_move)
 
                     if show:
                         network.generate(current_genome)
@@ -485,13 +493,9 @@ def main():
 
             elif players[cp] == PLAYER_TYPES[0]:
                 if possible_move is not None:
-                    move = connect4.getPossibleMove(possible_move)
-                    result = connect4.makeMove(move)
-                    if result not in [-2, -1]:
-                        connect4.match = False
+                    result = connect4.main(possible_move)
+                    if not connect4.match:
                         frame_count = 1
-                    else:
-                        connect4.switchPlayer()
 
         if not connect4.match:
             if frame_count >= max_fps / speed:
