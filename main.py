@@ -360,37 +360,20 @@ class Options:
                                             mlpg.GREY, handler=close)}
         self.messages = []
 
-        for player_key in players:
-            button_states = [True if players[player_key] == player_type else False for player_type in PLAYER_TYPES]
-            self.group_buttons[f"player_{player_key}"] = mlpg.ButtonGroup(PLAYER_TYPES,
-                                                                          (self.BOARDER + (OPTION_WIDTH * (1/6) + 100),
-                                                                           self.BOARDER + (len(self.messages) * 90)),
-                                                                          mlpg.GREY, mlpg.GREEN,
-                                                                          button_states=button_states)
-            self.messages.append(mlpg.Message(f"Player {player_key}:", (self.BOARDER + (OPTION_WIDTH * (1 / 6)),
-                                                                        self.BOARDER + (len(self.messages) * 90)),
-                                              align='mr'))
-
-        button_states = [True if speed == game_speed else False for speed in SPEEDS]
-        self.group_buttons['game_speed'] = mlpg.ButtonGroup(SPEEDS, (self.BOARDER + (OPTION_WIDTH * (1 / 6)) + 100,
-                                                                     self.BOARDER + (len(self.messages) * 90)),
-                                                            mlpg.GREY, mlpg.GREEN, button_states=button_states)
-        self.messages.append(mlpg.Message(f"Game Speed:", (self.BOARDER + (OPTION_WIDTH * (1 / 6)),
-                                                           self.BOARDER + (len(self.messages) * 90)), align='mr'))
-
-        button_states = [True if speed == evolution_speed else False for speed in SPEEDS]
-        self.group_buttons['evolution_speed'] = mlpg.ButtonGroup(SPEEDS, (self.BOARDER + (OPTION_WIDTH * (1 / 6) + 100),
-                                                                          self.BOARDER + (len(self.messages) * 90)),
-                                                                 mlpg.GREY, mlpg.GREEN, button_states=button_states)
-        self.messages.append(mlpg.Message(f"Evolution Speed:", (self.BOARDER + (OPTION_WIDTH * (1 / 6)),
-                                                                self.BOARDER + (len(self.messages) * 90)), align='mr'))
-
-        button_states = [True if SHOW == show_every else False for SHOW in SHOW_EVERY]
-        self.group_buttons['show'] = mlpg.ButtonGroup(SHOW_EVERY, (self.BOARDER + (OPTION_WIDTH * (1 / 6) + 100),
-                                                                   self.BOARDER + (len(self.messages) * 90)),
-                                                      mlpg.GREY, mlpg.GREEN, button_states=button_states)
-        self.messages.append(mlpg.Message(f"Show Every:", (self.BOARDER + (OPTION_WIDTH * (1 / 6)),
-                                                           self.BOARDER + (len(self.messages) * 90)), align='mr'))
+        gbi = {'Player 1:': {'selected': players[1], 'options': PLAYER_TYPES},
+               'Player 2:': {'selected': players[2], 'options': PLAYER_TYPES},
+               'Game Speed:': {'selected': game_speed, 'options': SPEEDS},
+               'Evolution Speed:': {'selected': evolution_speed, 'options': SPEEDS},
+               'Show Every:': {'selected': show_every, 'options': SHOW_EVERY}}
+        for group_key in gbi:
+            button_states = [True if option == gbi[group_key]['selected'] else False
+                             for option in gbi[group_key]['options']]
+            self.group_buttons[group_key] = mlpg.ButtonGroup(gbi[group_key]['options'],
+                                                             (self.BOARDER + (OPTION_WIDTH * (1 / 6) + 100),
+                                                              self.BOARDER + (len(self.messages) * 90)),
+                                                             mlpg.GREY, mlpg.GREEN, button_states=button_states)
+            self.messages.append(mlpg.Message(group_key, (self.BOARDER + (OPTION_WIDTH * (1 / 6)),
+                                                          self.BOARDER + (len(self.messages) * 90)), align='mr'))
 
     def update(self, mouse_pos: tuple, mouse_clicked: bool) -> bool:
         """
@@ -407,25 +390,34 @@ class Options:
             if action is not None:
                 return True
 
+        if players[1] != PLAYER_TYPES[1] or players[2] != PLAYER_TYPES[1]:
+            evolution_speed = SPEEDS[0]
+            show_every = SHOW_EVERY[0]
+            self.group_buttons['Evolution Speed:'].update(active=False)
+            self.group_buttons['Show Every:'].update(active=False)
+        else:
+            if game_speed > evolution_speed:
+                evolution_speed = game_speed
+            self.group_buttons['Evolution Speed:'].update(active=True)
+            self.group_buttons['Show Every:'].update(active=True)
+
         for group in self.group_buttons:
             button_key = self.group_buttons[group].update(mouse_pos, mouse_clicked)
-            if button_key is not None:
-                if group in ['player_1', 'player_2']:
+            if button_key is not None and self.group_buttons[group].active:
+                if group in ['Player 1:', 'Player 2:']:
                     if button_key == 0:
                         game_speed = SPEEDS[0]
                         show_every = SHOW_EVERY[0]
-                    players[int(group[-1])] = PLAYER_TYPES[button_key]
+                    players[int(group[-2])] = PLAYER_TYPES[button_key]
                     if button_key != 1:
                         game_speed = SPEEDS[0]
                         show_every = SHOW_EVERY[0]
                     setup()
-                elif group == 'game_speed':
+                elif group == 'Game Speed:':
                     game_speed = SPEEDS[button_key]
-                    if game_speed > evolution_speed:
-                        evolution_speed = game_speed
-                elif group == 'evolution_speed':
+                elif group == 'Evolution Speed:':
                     evolution_speed = SPEEDS[button_key] if game_speed <= SPEEDS[button_key] else game_speed
-                elif group == 'show':
+                elif group == 'Show Every:':
                     show_every = SHOW_EVERY[0]
                     if players[1] == players[2] == PLAYER_TYPES[1]:
                         show_every = SHOW_EVERY[button_key]
