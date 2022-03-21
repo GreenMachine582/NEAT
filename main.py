@@ -78,19 +78,21 @@ def calculateFitness(result: int) -> int:
     return fitness
 
 
-def getSpeedShow() -> tuple:
+def getSpeedShow(cp) -> tuple:
     """
     Returns that speed and show values depending on neat details.
     :return:
         - speed, show - tuple[int, bool]
     """
-    if show_every == 'Generation':
-        for player_id in [connect4.current_player, connect4.opponent]:
-            if neats[player_id].current_species == 0 and neats[player_id].current_genome == 0:
-                return game_speed, True
-        return evolution_speed, False
-    elif show_every == 'None':
-        return evolution_speed, False
+    if players[cp] != PLAYER_TYPES[0]:
+        if show_every == 'Generation':
+            for player_id in [cp, connect4.player_ids[connect4.opponent - 1]]:
+                if neats[player_id] is not None:
+                    if neats[player_id].current_species == 0 and neats[player_id].current_genome == 0:
+                        return game_speed, True
+            return evolution_speed, False
+        elif show_every == 'None':
+            return evolution_speed, False
     return game_speed, True
 
 
@@ -174,7 +176,7 @@ class Network:
     """
     Creates and draws the visual of the current genome in a neural network form.
     """
-    
+
     BOARDER = 40
     SPACING = 1
 
@@ -190,10 +192,10 @@ class Network:
     def generate(self, current_genome: Genome, width: int | float = None, height: int | float = None) -> None:
         """
         Creates the neural network visual of the current genome.
-        :param current_genome: 
-        :param width: 
-        :param height: 
-        :return: 
+        :param current_genome:
+        :param width:
+        :param height:
+        :return:
         """
         if width is None:
             width = NETWORK_WIDTH - (2 * self.BOARDER)
@@ -223,7 +225,7 @@ class Network:
         """
         Draws the neural network of the current genome.
         :param surface: Any
-        :return: 
+        :return:
             - None
         """
         surface.fill(self.colour['background'])
@@ -330,6 +332,9 @@ class Menu:
 
 
 class Options:
+    """
+    Options handles changing the global variables like a settings menu.
+    """
     BOARDER = 60
 
     def __init__(self):
@@ -342,7 +347,12 @@ class Options:
 
         self.generate()
 
-    def generate(self):
+    def generate(self) -> None:
+        """
+        Generates the options messages and buttons with default and global values.
+        :return:
+            - None
+        """
         self.buttons = {'back': mlpg.Button("Back", (OPTION_WIDTH * (2 / 5), OPTION_HEIGHT * (5 / 6)),
                                             mlpg.GREY, handler=True),
                         'quit': mlpg.Button("QUIT", (OPTION_WIDTH * (3 / 5), OPTION_HEIGHT * (5 / 6)),
@@ -381,7 +391,14 @@ class Options:
         self.messages.append(mlpg.Message(f"Show Every:", (self.BOARDER + (OPTION_WIDTH * (1 / 6)),
                                                            self.BOARDER + (len(self.messages) * 90)), align='mr'))
 
-    def update(self, mouse_pos, mouse_clicked):
+    def update(self, mouse_pos: tuple, mouse_clicked: bool) -> bool:
+        """
+        Updates the option buttons, global variables and other related attributes.
+        :param mouse_pos: tuple[int, int]
+        :param mouse_clicked: bool
+        :return:
+            - continue - bool
+        """
         global players, game_speed, evolution_speed, max_fps, show_every
         self.generate()
         for button_key in self.buttons:
@@ -414,16 +431,28 @@ class Options:
 
                 max_fps = max(FPS, max(game_speed, evolution_speed))
 
-    def draw(self, window):
-        window.fill(self.colour['background'])
+    def draw(self, surface: Any) -> None:
+        """
+        Draws the option buttons and texts to the surface.
+        :param surface: Any
+            - None
+        :return:
+        """
+        surface.fill(self.colour['background'])
         for message in self.messages:
-            message.draw(window)
+            message.draw(surface)
         for group in self.group_buttons:
-            self.group_buttons[group].draw(window)
+            self.group_buttons[group].draw(surface)
         for button_keys in self.buttons:
-            self.buttons[button_keys].draw(window)
+            self.buttons[button_keys].draw(surface)
 
-    def main(self):
+    def main(self) -> bool:
+        """
+        Main is the main loop for the options state and will display, update and check
+        collisions with objects.
+        :return:
+            - continue - bool
+        """
         global display, options_display
         run, typing = True, False
         while run:
@@ -450,7 +479,13 @@ class Options:
             clock.tick(FPS)
 
 
-def main():
+def main() -> None:
+    """
+    Main is the main loop for the project and will display, update and check
+    collisions with objects.
+    :return:
+        - None
+    """
     global display, connect4, network, info, menu, options
 
     setup()
@@ -458,8 +493,8 @@ def main():
     frame_count, speed, show = 1, game_speed, True
     run = True
     while run:
-        cp = connect4.current_player
-        speed, show = getSpeedShow()
+        cp = connect4.player_ids[connect4.current_player - 1]
+        speed, show = getSpeedShow(cp)
 
         possible_move = None
         mouse_clicked = False
@@ -521,15 +556,12 @@ def main():
 
         if not connect4.match:
             if frame_count >= max_fps / speed:
-                for player_key in [connect4.current_player, connect4.opponent]:
+                for player_key in [cp, connect4.opponent]:
                     if players[player_key] == PLAYER_TYPES[1]:
                         current_genome = neats[player_key].getGenome()
                         current_genome.fitness = calculateFitness(result)
                         neats[player_key].nextGenome(f"ai_{player_key}")
-                if result != connect4.opponent:
-                    player_temp, neat_temp = players[1], neats[1]
-                    players[1], neats[1] = players[2], neats[2]
-                    players[2], neats[2] = player_temp, neat_temp
+                connect4.player_ids.reverse()
                 connect4.reset()
 
         menu.draw(menu_display)
