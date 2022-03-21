@@ -10,7 +10,7 @@ from neat import NEAT
 import mattslib as ml
 import mattslib.pygame as mlpg
 
-__version__ = '1.5'
+__version__ = '1.5.1'
 __date__ = '21/03/2022'
 
 # Constants
