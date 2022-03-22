@@ -11,7 +11,7 @@ import mattslib as ml
 import mattslib.pygame as mlpg
 
 __version__ = '1.5.1'
-__date__ = '21/03/2022'
+__date__ = '22/03/2022'
 
 # Constants
 WIDTH, HEIGHT = 1120, 640
@@ -34,9 +34,9 @@ DIRECTORY = os.path.dirname(os.path.realpath(__file__))
 # Globals - Defaults
 players = {1: PLAYER_TYPES[1], 2: PLAYER_TYPES[1]}
 neats = {1: None, 2: None}
-show_every = SHOW_EVERY[0]
-game_speed = SPEEDS[1]
+game_speed = SPEEDS[-1]
 evolution_speed = SPEEDS[-1]
+show_every = SHOW_EVERY[1]
 max_fps = max(FPS, max(game_speed, evolution_speed))
 
 display = True
@@ -63,32 +63,32 @@ menu = None
 options = None
 
 
-def calculateFitness(win_lose: str) -> int:
+def calculateFitness(win: bool) -> int:
     """
     Calculates the fitness with match results.
-    :param win_lose: str
+    :param win: bool
     :return:
         - fitness - int
     """
     fitness = (connect4.ROWS * connect4.COLUMNS) - connect4.turn
-    if connect4.result == connect4.current_player:
-        if win_lose == 'win':
+    if connect4.result in list(players.keys()):
+        if win:
             fitness += 50
-        elif win_lose == 'lose':
+        elif not win:
             fitness = 0
     return fitness
 
 
-def getSpeedShow(cp: int) -> tuple:
+def getSpeedShow(current_player: int) -> tuple:
     """
     Returns that speed and show values depending on neat details.
-    :param cp: int
+    :param current_player: int
     :return:
         - speed, show - tuple[int, bool]
     """
-    if players[cp] != PLAYER_TYPES[0]:
+    if players[current_player] != PLAYER_TYPES[0]:
         if show_every == 'Generation':
-            for player_id in [cp, connect4.player_ids[connect4.opponent - 1]]:
+            for player_id in [current_player, connect4.player_ids[connect4.opponent]]:
                 if neats[player_id] is not None:
                     if neats[player_id].current_species == 0 and neats[player_id].current_genome == 0:
                         return game_speed, True
@@ -487,8 +487,8 @@ def main() -> None:
     frame_count, speed, show = 1, game_speed, True
     run = True
     while run:
-        cp = connect4.player_ids[connect4.current_player - 1]
-        speed, show = getSpeedShow(cp)
+        current_player = connect4.player_ids[connect4.current_player]
+        speed, show = getSpeedShow(current_player)
 
         possible_move = None
         mouse_clicked = False
@@ -501,7 +501,7 @@ def main() -> None:
                 if event.type == pg.KEYDOWN:
                     if event.key == pg.K_ESCAPE:
                         close()
-                    if connect4.match and players[cp] == PLAYER_TYPES[0]:
+                    if connect4.match and players[current_player] == PLAYER_TYPES[0]:
                         if event.key in [pg.K_1, pg.K_KP1]:
                             possible_move = 0
                         elif event.key in [pg.K_2, pg.K_KP2]:
@@ -523,16 +523,16 @@ def main() -> None:
             menu.update(mouse_pos, mouse_clicked)
 
         if connect4.match:
-            if players[cp] != PLAYER_TYPES[0]:
+            if players[current_player] != PLAYER_TYPES[0]:
                 if frame_count >= max_fps / speed:
                     frame_count = 1
 
-                    if players[cp] == PLAYER_TYPES[1]:
-                        current_genome = neats[cp].getGenome()
+                    if players[current_player] == PLAYER_TYPES[1]:
+                        current_genome = neats[current_player].getGenome()
                     else:
-                        current_genome = neats[cp].best_genome
+                        current_genome = neats[current_player].best_genome
 
-                    if not neats[cp].shouldEvolve() and players[cp] == PLAYER_TYPES[1]:
+                    if not neats[current_player].shouldEvolve() and players[current_player] == PLAYER_TYPES[1]:
                         close()
 
                     possible_move = neatMove(current_genome)
@@ -540,9 +540,9 @@ def main() -> None:
 
                     if show and display:
                         network.generate(current_genome)
-                        info.update(neats[cp].getInfo())
+                        info.update(neats[current_player].getInfo())
 
-            elif players[cp] == PLAYER_TYPES[0]:
+            elif players[current_player] == PLAYER_TYPES[0]:
                 if possible_move is not None:
                     connect4.main(possible_move)
                     if not connect4.match:
@@ -550,21 +550,18 @@ def main() -> None:
 
         if not connect4.match:
             if frame_count >= max_fps / speed:
-                yeet = ['win', 'lose']
-                for i, player_key in enumerate([cp, connect4.opponent]):
+                for i, player_key in enumerate([current_player, connect4.player_ids[connect4.opponent]]):
                     if players[player_key] == PLAYER_TYPES[1]:
                         current_genome = neats[player_key].getGenome()
-                        fitness = calculateFitness(yeet[i])
-                        current_genome.fitness = fitness
+                        current_genome.fitness = calculateFitness(bool(i))
                         neats[player_key].nextGenome(f"ai_{player_key}")
-                connect4.player_ids.reverse()
                 connect4.reset()
 
         if display:
             menu.draw(menu_display)
             display.blit(menu_display, (GAME_PANEL[0], GAME_PANEL[1] - MENU_HEIGHT))
 
-            if show or players[cp] == PLAYER_TYPES[0]:
+            if show or players[current_player] == PLAYER_TYPES[0]:
                 connect4.draw(game_display)
                 network.draw(network_display)
                 info.draw(info_display)
