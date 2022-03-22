@@ -10,7 +10,7 @@ from mattslib.dict import countOccurrence
 from mattslib.file import read, write
 
 __version__ = '1.5.1'
-__date__ = '21/03/2022'
+__date__ = '22/03/2022'
 
 
 def genomicDistance(x_member: Genome, y_member: Genome, distance_weights: dict) -> float:
@@ -233,11 +233,14 @@ class NEAT(object):
             - None
         """
         if len(self.species) > 0:
-            for specie_key, specie in enumerate(self.species):
-                offspring = int(round((specie.fitness_mean / fitness_sum) * (self.population - self.getPopulation())))
-                for _ in range(offspring):
-                    child = self.breed(self.settings.breed_probabilities, specie_key)
-                    self.classifyGenome(child)
+            temp_species = deepcopy(self.species)
+            for specie_key, specie in enumerate(temp_species):
+                if fitness_sum != 0:
+                    offspring = round((specie.fitness_mean / fitness_sum) * (self.population - self.getPopulation()))
+                    fitness_sum -= specie.fitness_mean
+                    for _ in range(offspring):
+                        child = self.breed(self.settings.breed_probabilities, specie_key)
+                        self.classifyGenome(child)
         else:
             for p in range(self.population):
                 genome = deepcopy(self.best_genome) if p % 3 == 0 else Genome(self.inputs, self.outputs,
@@ -257,7 +260,7 @@ class NEAT(object):
             specie.updateFitness()
             fitness_sum += specie.fitness_mean
 
-        if fitness_sum <= 0:
+        if fitness_sum == 0:
             for specie in self.species:
                 for member in specie.members:
                     member.mutate(self.settings.mutation_probabilities)
