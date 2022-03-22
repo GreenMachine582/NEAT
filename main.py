@@ -72,10 +72,7 @@ def calculateFitness(win: bool) -> int:
     """
     fitness = (connect4.ROWS * connect4.COLUMNS) - connect4.turn
     if connect4.result in list(players.keys()):
-        if win:
-            fitness += 50
-        elif not win:
-            fitness = 0
+        fitness = fitness + 50 if win else 0
     return fitness
 
 
