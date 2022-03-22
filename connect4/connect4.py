@@ -3,7 +3,7 @@ from __future__ import annotations
 import mattslib.pygame as mlpg
 
 __version__ = '1.5.1'
-__date__ = '21/03/2022'
+__date__ = '22/03/2022'
 
 # Constants
 WIDTH, HEIGHT = 1120, 640
@@ -81,8 +81,8 @@ class Connect4:
     """
 
     ROWS, COLUMNS = 6, 7
-    PLAYERS = {1: 'Red', 2: "Yellow"}
-    COLOURS = {1: mlpg.RED, 2: mlpg.YELLOW}
+    PLAYERS = {0: 'Red', 1: "Yellow"}
+    COLOURS = {0: mlpg.RED, 1: mlpg.YELLOW}
     EMPTY = mlpg.WHITE
     INVALID_MOVE = -2
     LENGTH = 4
@@ -95,8 +95,8 @@ class Connect4:
         self.visible = True
         self.colour = {'background': mlpg.BLUE}
 
-        self.current_player = 1
-        self.opponent = 2
+        self.current_player = 0
+        self.opponent = abs(self.current_player - 1)
         self.match = True
         self.turn = 0
         self.result = -1
@@ -105,7 +105,7 @@ class Connect4:
 
         self.board_background = mlpg.Rect((GAME_WIDTH / 2, GAME_HEIGHT / 2), self.colour['background'],
                                           [GAME_WIDTH - (self.BOARDER * 2), GAME_HEIGHT - (self.BOARDER * 2)])
-        self.player_text = mlpg.Message(f"{self.PLAYERS[self.current_player]}'s turn!",
+        self.player_text = mlpg.Message(f"Player {self.player_ids[self.current_player]} - {self.PLAYERS[self.current_player]}'s turn!",
                                         (GAME_WIDTH / 2, 60), size=40)
 
         self.board = [[Piece((h, j), self.ROWS, self.COLUMNS, self.EMPTY) for j in range(self.COLUMNS)]
@@ -122,9 +122,10 @@ class Connect4:
                 self.board[h][j].update(colour=self.EMPTY)
         self.match = True
         self.turn = 0
-        self.current_player = 1
-        self.opponent = 2
+        self.current_player = 0
+        self.opponent = abs(self.current_player - 1)
         self.result = -1
+        self.player_ids = self.player_ids[::-1]
 
     def draw(self, surface: Any) -> None:
         """
@@ -133,7 +134,7 @@ class Connect4:
         :return:
             - None
         """
-        self.player_text.update(text=f"{self.PLAYERS[self.current_player]}'s turn!")
+        self.player_text.update(text=f"Player {self.player_ids[self.current_player]} - {self.PLAYERS[self.current_player]}'s turn!")
 
         surface.fill(mlpg.changeColour(self.colour['background'], -70))
         self.board_background.draw(surface)
@@ -195,7 +196,7 @@ class Connect4:
             - None
         """
         self.current_player = self.opponent
-        self.opponent = 2 if self.current_player == 1 else 1
+        self.opponent = abs(self.current_player - 1)
 
     def getPieceSlices(self, move: tuple) -> tuple:
         """
@@ -216,13 +217,13 @@ class Connect4:
                 connection_count = 0
                 count_connections = True
                 if directions[direction_pair][direction] is not None:
-                    directions[direction_pair][direction].append(self.current_player)
+                    directions[direction_pair][direction].append(self.player_ids[self.current_player])
                     for n in range(1, self.LENGTH):
                         a, b = move[0] + (n * direction[0]), move[1] + (n * direction[1])
                         if 0 <= a < self.ROWS and 0 <= b < self.COLUMNS:
                             piece = self.board[a][b]
                             if piece.colour == self.COLOURS[self.current_player]:
-                                directions[direction_pair][direction].append(self.current_player)
+                                directions[direction_pair][direction].append(self.player_ids[self.current_player])
                                 if count_connections:
                                     connection_count += 1
                             else:
@@ -253,7 +254,7 @@ class Connect4:
                 win = True
         if win:
             self.match = False
-            self.result = self.current_player
+            self.result = self.player_ids[self.current_player]
             return
 
         for row in self.board:
