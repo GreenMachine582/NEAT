@@ -9,7 +9,7 @@ from mattslib.dict import countOccurrence, sortIntoDict
 from mattslib.math_util import mean
 
 __version__ = '1.5.1'
-__date__ = '18/03/2022'
+__date__ = '22/03/2022'
 
 
 class Specie(object):
@@ -38,7 +38,7 @@ class Specie(object):
         for member in self.members:
             member.adjusted_fitness = member.fitness / len(self.members)
 
-        self.fitness_mean = mean(self.getAllFitnesses())
+        self.fitness_mean = int(round(mean(self.getAllFitnesses())))
         self.fitness_history.append(self.fitness_mean)
 
         if len(self.fitness_history) > self.max_fitness_history:
