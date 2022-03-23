@@ -6,16 +6,17 @@ import random
 from .genome import Genome
 from .settings import Settings
 from .specie import Specie
-from mattslib.dict import countOccurrence
+from mattslib.dict import countOccurrence, getKeyByWeights
 from mattslib.file import read, write
 
-__version__ = '1.5.1'
-__date__ = '22/03/2022'
+__version__ = '1.4.2'
+__date__ = '23/03/2022'
 
 
-def genomicDistance(x_member: Genome, y_member: Genome, distance_weights: dict) -> float:
+def geneticDistance(x_member: Genome, y_member: Genome, distance_weights: dict) -> float:
     """
-    Calculations the distance between the given genomes.
+    Calculates the distance between genomes by measuring the likeness of
+    their respective genes.
     :param x_member: Genome
     :param y_member: Genome
     :param distance_weights: dict[str: int | float]
@@ -26,18 +27,19 @@ def genomicDistance(x_member: Genome, y_member: Genome, distance_weights: dict) 
     y_connections = list(y_member.connections)
     connections = countOccurrence(x_connections + y_connections)
 
-    matching_connections = [i for i in connections if connections[i] >= 2]
-    disjoint_connections = [i for i in connections if connections[i] == 1]
+    matching_connections = [pos for pos in connections if connections[pos] >= 2]
+    disjoint_connections = [pos for pos in connections if connections[pos] == 1]
+
     count_connections = len(max(x_connections, y_connections))
     count_nodes = min(x_member.total_nodes, y_member.total_nodes)
 
     weight_diff = 0
-    for i in matching_connections:
-        weight_diff += abs(x_member.connections[i].weight - y_member.connections[i].weight)
+    for pos in matching_connections:
+        weight_diff += abs(x_member.connections[pos].weight - y_member.connections[pos].weight)
 
     bias_diff = 0
-    for i in range(count_nodes):
-        bias_diff += abs(x_member.nodes[i].bias - y_member.nodes[i].bias)
+    for node in range(count_nodes):
+        bias_diff += abs(x_member.nodes[node].bias - y_member.nodes[node].bias)
 
     t1 = distance_weights['connection'] * (len(disjoint_connections) / count_connections)
     t2 = distance_weights['weight'] * (weight_diff / len(matching_connections))
@@ -59,8 +61,8 @@ def genomicCrossover(x_member: Genome, y_member: Genome) -> Genome:
     y_connections = list(y_member.connections)
     connections = countOccurrence(x_connections + y_connections)
 
-    matching_connections = [i for i in connections if connections[i] == 2]
-    disjoint_connections = [i for i in connections if connections[i] == 1]
+    matching_connections = [pos for pos in connections if connections[pos] == 2]
+    disjoint_connections = [pos for pos in connections if connections[pos] == 1]
 
     for pos in matching_connections:
         parent = random.choice([x_member, y_member])
@@ -159,7 +161,7 @@ class NEAT(object):
         if len(self.species) > 0:
             for specie in self.species:
                 representative_of_specie = specie.members[0]
-                distance = genomicDistance(genome, representative_of_specie, self.settings.distance_weights)
+                distance = geneticDistance(genome, representative_of_specie, self.settings.distance_weights)
                 if distance <= self.settings.delta_genome_threshold:
                     specie.members.append(genome)
                     classified = True
@@ -189,10 +191,8 @@ class NEAT(object):
         :return:
             - child - Genome
         """
-        crossover_by = random.choices(list(probabilities['crossover'].keys()),
-                                      weights=list(probabilities['crossover'].values()))[0]
-        breed_by = random.choices(list(probabilities['breed'].keys()),
-                                  weights=list(probabilities['breed'].values()))[0]
+        crossover_by = getKeyByWeights(probabilities['crossover'])
+        breed_by = getKeyByWeights(probabilities['breed'])
 
         x_member, y_member = None, None
         if crossover_by == 'intraspecies' or breed_by == 'asexual' or len(self.species) < 2:
