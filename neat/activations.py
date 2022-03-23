@@ -4,7 +4,7 @@ import random
 
 from mattslib import math_util
 
-__version__ = '1.5.1'
+__version__ = '1.4.1'
 __date__ = '19/03/2022'
 
 
