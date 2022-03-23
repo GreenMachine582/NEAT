@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from mattslib.file import read, write
 
-__version__ = '1.5.2'
+__version__ = '1.4.2'
 __date__ = '23/03/2022'
 
 
