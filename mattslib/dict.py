@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import random
 
-__version__ = '1.2.1'
+__version__ = '1.2.2'
 __date__ = '23/03/2022'
 
 
