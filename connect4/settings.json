@@ -2,6 +2,8 @@
     "save_intervals": [1, 100, 1000, 2000, 5000, 10000],
     "delta_genome_threshold": 0.75,
     "distance_weights": {
+        "activation": 0.1,
+        "node": 0.5,
         "connection": 1.0,
         "weight": 1.0,
         "bias": 1.0
