@@ -3,11 +3,12 @@ from __future__ import annotations
 import random
 
 from .activations import getActivation
-from .connection import Connection
-from .node import Node
+from .gene import Node, Connection
 
-__version__ = '1.5.1'
-__date__ = '18/03/2022'
+from mattslib.dict import getKeyByWeights
+
+__version__ = '1.5.2'
+__date__ = '23/03/2022'
 
 
 class Genome(object):
@@ -88,28 +89,43 @@ class Genome(object):
 
     def mutate(self, probabilities: dict) -> None:
         """
-        Mutates a gene within the genome and resets the output values.
+        Mutates a gene and a genome attribute using mutation probabilities.
         :param probabilities: dict[str: Any]
         :return:
             - None
         """
         self.addActiveConnection()
-
-        mutation = random.choices(list(probabilities.keys()), weights=list(probabilities.values()))[0]
         node_types = self.getNodeByType()
         random_number = ((self.HIGH - self.LOW) * random.random() + self.LOW)
 
-        if mutation == "activation":
+        mutate_gene = getKeyByWeights(probabilities['gene'])
+        node = random.choice(node_types[self.LAYER_TYPES[1]] + node_types[self.LAYER_TYPES[2]])
+        if 'node' in mutate_gene:
+            if 'activation' in mutate_gene:
+                self.nodes[node].activation = getActivation(random.choice(self.activations))
+            elif 'bias' in mutate_gene:
+                if 'set' in mutate_gene:
+                    self.nodes[node].bias = random_number
+                elif 'adjust' in mutate_gene:
+                    self.nodes[node].bias += random_number
+        if 'connection' in mutate_gene:
+            pos = random.choice(list(self.connections.keys()))
+            if 'active' in mutate_gene:
+                self.connections[pos].active = not self.connections[pos].active
+            if 'weight' in mutate_gene:
+                if 'set' in mutate_gene:
+                    self.connections[pos].weight = random_number
+                elif 'adjust' in mutate_gene:
+                    self.connections[pos].weight += random_number
+
+        mutate_genome = getKeyByWeights(probabilities['genome'])
+        if mutate_genome == 'activation':
             self.activation = getActivation(random.choice(self.activations))
-        elif mutation == "node":
+        elif mutate_genome == 'node':
             self.addNode()
-        elif mutation == "connection":
+        elif mutate_genome == 'connection':
             self.addConnection(self.pair(node_types[self.LAYER_TYPES[0]], node_types[self.LAYER_TYPES[1]],
                                          node_types[self.LAYER_TYPES[2]]), random_number)
-        elif mutation in ["weight_perturb", "weight_set"]:
-            self.adjustWeight(mutation, random_number)
-        elif mutation in ["bias_perturb", "bias_set"]:
-            self.adjustBias(mutation, random_number, node_types[self.LAYER_TYPES[1]], node_types[self.LAYER_TYPES[2]])
 
         self.reset()
 
@@ -130,7 +146,7 @@ class Genome(object):
             - None
         """
         deactivated_connections = [pos for pos in self.connections if not self.connections[pos].active]
-        if len(deactivated_connections) > 0:
+        if len(deactivated_connections) == len(self.connections):
             self.connections[random.choice(deactivated_connections)].active = True
 
     def addConnection(self, pos: tuple, weight: int | float) -> None:
@@ -189,36 +205,6 @@ class Genome(object):
             node_b = self.total_nodes
             self.addNode()
         return node_a, node_b
-
-    def adjustWeight(self, mutation: str, random_number: float) -> None:
-        """
-        Adjusts the weight of a random connection.
-        :param mutation: str
-        :param random_number: float
-        :return:
-            - None
-        """
-        pos = random.choice(list(self.connections.keys()))
-        if mutation == "weight_perturb":
-            self.connections[pos].weight += random_number
-        elif mutation == "weight_set":
-            self.connections[pos].weight = random_number
-
-    def adjustBias(self, mutation: str, random_number: float, hidden_nodes: list, output_nodes: list) -> None:
-        """
-        Adjusts the bias of a random node.
-        :param mutation: str
-        :param random_number: float
-        :param hidden_nodes: list[int]
-        :param output_nodes: list[int]
-        :return:
-            - None
-        """
-        node = random.choice(hidden_nodes + output_nodes)
-        if mutation == "bias_perturb":
-            self.nodes[node].bias += random_number
-        elif mutation == "bias_set":
-            self.nodes[node].bias = random_number
 
     def getNodeByType(self, layer_types: list = None) -> dict:
         """
