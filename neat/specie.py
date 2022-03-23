@@ -14,7 +14,7 @@ __date__ = '22/03/2022'
 
 class Specie(object):
     """
-    Separates the population into species with similar genetic distance.
+    Separates the population into species with similar genomic distance.
     """
     def __init__(self, max_fitness_history: int, members: list = None):
         """
