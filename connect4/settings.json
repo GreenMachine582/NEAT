@@ -39,7 +39,7 @@
             "connection_weight_adjust": 0.4,
             "connection_weight_set": 0.1
         },
-        "breed": {
+        "genome": {
             "activation": 0.01,
             "node": 0.01,
             "connection": 0.09
