@@ -95,13 +95,14 @@ def getSpeedShow(current_player: int) -> tuple:
     return game_speed, True
 
 
-def setupAi(player_id: int, inputs: int = 4, outputs: int = 1) -> NEAT:
+def setupAi(player_id: int, inputs: int = 4, outputs: int = 1, population: int = 100) -> NEAT:
     """
     Sets up neat with game settings in mind.
     :rtype: object
     :param player_id: int
     :param inputs: int
     :param outputs: int
+    :param population: int
     :return:
         - neat - NEAT
     """
@@ -114,7 +115,7 @@ def setupAi(player_id: int, inputs: int = 4, outputs: int = 1) -> NEAT:
             neat = NEAT.load(f"ai_{player_id}_gen_{players[player_id]}", f"{DIRECTORY}\\{GAME}")
             return neat
     neat = NEAT(DIRECTORY, f"\\{GAME}")
-    neat.generate(inputs, outputs, population=50)
+    neat.generate(inputs, outputs, population=population)
     return neat
 
 
