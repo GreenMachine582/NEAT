@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from mattslib.file import read, write
 
-__version__ = '1.6.1'
+__version__ = '1.5.2'
 __date__ = '23/03/2022'
 
 
@@ -44,11 +44,12 @@ class Settings(object):
                       'sexual': 0.5}
         }
         self.mutation_probabilities = {
-            'gene': {'activation': 0.1,
-                     'adjust_bias': 0.3,
-                     'set_bias': 0.1,
-                     'adjust_weight': 0.4,
-                     'set_weight': 0.1},
+            'gene': {'node_activation': 0.1,
+                     'node_bias_adjust': 0.3,
+                     'node_bias_set': 0.1,
+                     'connection_active': 0.05,
+                     'connection_weight_adjust': 0.4,
+                     'connection_weight_set': 0.1},
             'genome': {'activation': 0.01,
                        'node': 0.01,
                        'connection': 0.09},
