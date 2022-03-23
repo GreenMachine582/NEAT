@@ -10,8 +10,8 @@ from neat import NEAT
 import mattslib as ml
 import mattslib.pygame as mlpg
 
-__version__ = '1.4.3'
-__date__ = '22/03/2022'
+__version__ = '1.4.4'
+__date__ = '23/03/2022'
 
 # Constants
 WIDTH, HEIGHT = 1120, 640
@@ -168,6 +168,9 @@ def close() -> None:
     :return:
         - None
     """
+    for player_id in players:
+        if players[player_id] == PLAYER_TYPES[1]:
+            neats[player_id].save(f"\\ai_{player_id}")
     pg.quit()
     quit()
 
@@ -208,11 +211,11 @@ class Network:
         connections = current_genome.connections
 
         for d, depth in enumerate(node_depths):
+            nodes_in_depth = len(node_depths[depth])
             for i, node_index in enumerate(node_depths[depth]):
                 node_type = current_genome.nodes[node_index].layer_type
-                i = 1 if len(node_depths[depth]) == 1 else i
-                pos = [int(self.BOARDER + width * (d / (len(node_depths) - 1))),
-                       int(self.BOARDER + height * (i / max(len(node_depths[depth]) - 1, 2)))]
+                pos = (int(self.BOARDER + width * (d / (len(node_depths) - 1))),
+                       int(self.BOARDER + height * ((1/2) if nodes_in_depth <= 1 else (i / (nodes_in_depth - 1)))))
                 self.network[node_index] = {'pos': pos, 'colour': self.colour[node_type], 'connections': []}
 
         for pos in connections:
