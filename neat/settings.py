@@ -21,6 +21,8 @@ class Settings(object):
         self.save_intervals = []
         self.delta_genome_threshold = 0.75
         self.distance_weights = {
+            'activation': 0.1,
+            'node': 0.5,
             'connection': 1.0,
             'weight': 1.0,
             'bias': 1.0
