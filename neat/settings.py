@@ -2,19 +2,19 @@ from __future__ import annotations
 
 from mattslib.file import read, write
 
-__version__ = '1.5.1'
-__date__ = '20/03/2022'
+__version__ = '1.6.1'
+__date__ = '23/03/2022'
 
 
 class Settings(object):
     """
     Contains the default settings for NEAT, also has options
-     to save and load values.
+    to save and load values.
     """
     def __init__(self, directory: str, load: bool = True):
         """
         Initiates the object with default values and loads required
-         settings from given file directory.
+        settings from given file directory.
         :param directory: str
         :param load: bool
         """
@@ -44,13 +44,14 @@ class Settings(object):
                       'sexual': 0.5}
         }
         self.mutation_probabilities = {
-            'activation': 0.01,
-            'node': 0.01,
-            'connection': 0.09,
-            'weight_perturb': 0.4,
-            'weight_set': 0.1,
-            'bias_perturb': 0.3,
-            'bias_set': 0.1
+            'gene': {'activation': 0.1,
+                     'adjust_bias': 0.3,
+                     'set_bias': 0.1,
+                     'adjust_weight': 0.4,
+                     'set_weight': 0.1},
+            'genome': {'activation': 0.01,
+                       'node': 0.01,
+                       'connection': 0.09},
         }
 
         self.load(directory) if load else self.save(directory)
@@ -58,7 +59,7 @@ class Settings(object):
     def load(self, directory='') -> None:
         """
         Loads the file and converts the json dict and updates
-         the class
+        the class.
         :param directory: str
         :return:
             - None
