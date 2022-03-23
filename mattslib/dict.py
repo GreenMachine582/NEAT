@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import random
 
-__version__ = '1.3.1'
+__version__ = '1.2.1'
 __date__ = '23/03/2022'
 
 
@@ -86,7 +86,7 @@ def getKeyByWeights(array: dict, item: int = 0) -> Any:
     Returns a weighted random key from array
     :param array: dict[Any: int | float]
     :param item: int
-    :return: 
+    :return:
         - key - Any
     """
     return random.choices(list(array.keys()), weights=list(array.values()))[item]
