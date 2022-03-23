@@ -8,7 +8,7 @@ from .genome import Genome
 from mattslib.dict import countOccurrence, sortIntoDict
 from mattslib.math_util import mean
 
-__version__ = '1.5.1'
+__version__ = '1.4.1'
 __date__ = '22/03/2022'
 
 
@@ -30,8 +30,7 @@ class Specie(object):
 
     def updateFitness(self) -> None:
         """
-        Adjusts the fitness for the members and update the specie
-         fitness.
+        Adjusts the fitness for the members and update the specie fitness.
         :return:
             - None
         """
@@ -62,7 +61,7 @@ class Specie(object):
     def getRepresentative(self) -> None:
         """
         Searches through members in specie for leading representative
-         fitness.
+        fitness.
         :return:
             - None
         """
