@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import mattslib.pygame as mlpg
 
-__version__ = '1.5.1'
+__version__ = '1.3.2'
 __date__ = '22/03/2022'
 
 # Constants
