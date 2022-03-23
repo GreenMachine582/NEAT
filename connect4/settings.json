@@ -1,5 +1,5 @@
 {
-    "save_intervals": [1, 100, 1000, 10000],
+    "save_intervals": [1, 100, 1000, 2000, 5000, 10000],
     "delta_genome_threshold": 0.75,
     "distance_weights": {
         "connection": 1.0,
@@ -8,7 +8,10 @@
     },
     "node_info": {
         "activations": [
-            "tanh"
+            "tanh",
+            "leakyReLU",
+            "sigmoid",
+            "binaryStep"
         ],
         "max_depth": 5,
         "max_backtrack": 1
@@ -28,12 +31,17 @@
         }
     },
     "mutation_probabilities": {
-        "activation": 0.01,
-        "node": 0.01,
-        "connection": 0.09,
-        "weight_perturb": 0.4,
-        "weight_set": 0.1,
-        "bias_perturb": 0.3,
-        "bias_set": 0.1
+        "gene": {
+            "activation": 0.1,
+            "adjust_bias": 0.3,
+            "set_bias": 0.1,
+            "adjust_weight": 0.4,
+            "set_weight": 0.1
+        },
+        "breed": {
+            "activation": 0.01,
+            "node": 0.01,
+            "connection": 0.09
+        }
     }
 }
