@@ -4,7 +4,7 @@ import json
 import logging
 import pickle
 
-__version__ = '1.3.1'
+__version__ = '1.2.2'
 __date__ = '19/03/2022'
 
 
