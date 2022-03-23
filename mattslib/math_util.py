@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import math
 
-__version__ = '1.2'
+__version__ = '1.2.1'
 __date__ = '19/03/2022'
 
 
