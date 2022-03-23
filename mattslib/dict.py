@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import logging
+import random
 
-__version__ = '1.2.1'
-__date__ = '19/03/2022'
+__version__ = '1.3.1'
+__date__ = '23/03/2022'
 
 
 def countOccurrence(array: list = None) -> dict:
@@ -78,3 +79,14 @@ def removeKeys(array: dict = None, remove: Any = None) -> dict:
         return sorted_dict
     except Exception as e:
         logging.exception(e)
+
+
+def getKeyByWeights(array: dict, item: int = 0) -> Any:
+    """
+    Returns a weighted random key from array
+    :param array: dict[Any: int | float]
+    :param item: int
+    :return: 
+        - key - Any
+    """
+    return random.choices(list(array.keys()), weights=list(array.values()))[item]
