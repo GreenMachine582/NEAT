@@ -1,5 +1,5 @@
 {
-    "save_intervals": [1, 100, 1000, 2000, 5000, 10000],
+    "save_intervals": [1, 100, 1000, 2000, 5000, 7500, 10000],
     "delta_genome_threshold": 0.75,
     "distance_weights": {
         "activation": 0.1,

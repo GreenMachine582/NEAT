@@ -2,12 +2,8 @@ from __future__ import annotations
 
 import mattslib.pygame as mlpg
 
-__version__ = '1.3.2'
-__date__ = '22/03/2022'
-
-# Constants
-WIDTH, HEIGHT = 1120, 640
-GAME_WIDTH, GAME_HEIGHT = HEIGHT, HEIGHT
+__version__ = '1.3.3'
+__date__ = '24/03/2022'
 
 
 class Piece:
@@ -19,13 +15,14 @@ class Piece:
     TOP_PADDING = 80
     SPACING = 10
 
-    def __init__(self, coordinates: tuple, rows: int, cols: int, colour: list):
+    def __init__(self, coordinates: tuple, rows: int, cols: int, colour: list, game_height: int | float):
         """
         Initiates the object with required values.
         :param coordinates: tuple[int, int]
         :param rows: int
         :param cols: int
         :param colour: list[int]
+        :param height: int | float
         """
         self.coordinates = coordinates
         self.radius = 30
@@ -34,7 +31,7 @@ class Piece:
         self.show = True
         self.colour = colour
 
-        self.radius = (((GAME_HEIGHT - self.BOARDER * 2) / max(rows, cols)) - self.SPACING) / 2
+        self.radius = (((game_height - self.BOARDER * 2) / max(rows, cols)) - self.SPACING) / 2
         self.pos = (self.BOARDER + (self.coordinates[1] * (self.radius * 2 + self.SPACING)),
                     self.BOARDER + self.TOP_PADDING + (self.coordinates[0] * (self.radius * 2 + self.SPACING)))
 
@@ -89,7 +86,10 @@ class Connect4:
     GAME_STATES = {-2: 'Invalid move', -1: '', 0: 'Draw', 1: 'Player 1 Wins', 2: 'Player 2 Wins'}
     BOARDER = 10
 
-    def __init__(self):
+    def __init__(self, game_dims):
+        self.game_width = game_dims[0]
+        self.game_height = game_dims[1]
+
         self.board = []
         self.active = True
         self.visible = True
@@ -103,12 +103,12 @@ class Connect4:
 
         self.player_ids = [1, 2]
 
-        self.board_background = mlpg.Rect((GAME_WIDTH / 2, GAME_HEIGHT / 2), self.colour['background'],
-                                          [GAME_WIDTH - (self.BOARDER * 2), GAME_HEIGHT - (self.BOARDER * 2)])
+        self.board_background = mlpg.Rect((self.game_width / 2, self.game_height / 2), self.colour['background'],
+                                          [self.game_width - (self.BOARDER * 2), self.game_height - (self.BOARDER * 2)])
         self.player_text = mlpg.Message(f"Player {self.player_ids[self.current_player]} - {self.PLAYERS[self.current_player]}'s turn!",
-                                        (GAME_WIDTH / 2, 60), size=40)
+                                        (self.game_width / 2, 60), size=40)
 
-        self.board = [[Piece((h, j), self.ROWS, self.COLUMNS, self.EMPTY) for j in range(self.COLUMNS)]
+        self.board = [[Piece((h, j), self.ROWS, self.COLUMNS, self.EMPTY, self.game_height) for j in range(self.COLUMNS)]
                       for h in range(self.ROWS)]
 
     def reset(self) -> None:

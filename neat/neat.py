@@ -9,8 +9,8 @@ from .specie import Specie
 from mattslib.dict import countOccurrence, getKeyByWeights
 from mattslib.file import read, write
 
-__version__ = '1.4.2'
-__date__ = '23/03/2022'
+__version__ = '1.4.3'
+__date__ = '24/03/2022'
 
 
 def genomicDistance(x_member: Genome, y_member: Genome, distance_weights: dict) -> float:
@@ -155,39 +155,109 @@ class NEAT(object):
 
         self.best_genome = self.species[0].members[0]
 
-    def classifyGenome(self, genome: Genome) -> None:
+    def nextGenome(self, filename: str = '') -> None:
         """
-        Classifies the genome and groups it with first similar species or creates
-        a new specie.
-        :param genome: Genome
+        Gets the next genome in population, updates counters and
+        saves models at certain intervals.
+        :param filename: str
         :return:
             - None
         """
-        classified = False
-        if len(self.species) > 0:
-            for specie in self.species:
-                representative_of_specie = specie.members[0]
-                distance = genomicDistance(genome, representative_of_specie, self.settings.distance_weights)
-                if distance <= self.settings.delta_genome_threshold:
-                    specie.members.append(genome)
-                    classified = True
-                    break
-        if not classified:
-            self.species.append(Specie(self.settings.max_fitness_history, [genome]))
+        self.save(filename)
+        specie = self.species[self.current_species]
+        if self.current_genome < len(specie.members) - 1:
+            self.current_genome += 1
+        else:
+            self.current_genome = 0
+            if self.current_species < len(self.species) - 1:
+                self.current_species += 1
+            else:
+                if self.generation + 1 in self.settings.save_intervals:
+                    self.save(f"{filename}_gen_{self.generation + 1}")
+                self.evolve()
+                self.current_species = 0
 
-    def updateFitness(self) -> None:
+    def shouldEvolve(self) -> bool:
         """
-        Updates the best fitness and genome from leading genomes within
-        each specie.
+        Checks the settings if the current NEAT meets requirements to
+        continue evolving.
+        :return:
+            - bool - True | False
+        """
+        self.updateBestGenome()
+        if self.settings.max_generations and self.generation >= self.settings.max_generations:
+            if self.settings.max_fitness and self.best_genome.fitness >= self.settings.max_fitness:
+                return False
+        return True
+
+    def evolve(self) -> None:
+        """
+        Updates the fitness for each specie, if no progress has been made then
+        mutate, else kill a portion of the population and repopulate.
         :return:
             - None
         """
-        leading_genomes = [specie.getRepresentative() for specie in self.species]
-        best_genome = leading_genomes[0]
-        for leading_genome in leading_genomes:
-            if leading_genome.fitness > best_genome.fitness:
-                best_genome = leading_genome
-        self.best_genome = deepcopy(best_genome)
+
+        # Calculates the generation fitness
+        fitness_sum = 0
+        for specie in self.species:
+            specie.updateRepresentative()
+            specie.updateFitness()
+            fitness_sum += specie.fitness_mean
+
+        # Mutates all genomes since fitness didn't reach minimum requirements
+        if fitness_sum <= 0:
+            for specie in self.species:
+                for member in specie.members:
+                    member.mutate(self.settings.mutation_probabilities)
+        else:
+            self.killPopulation()
+            self.repopulate(fitness_sum)
+        self.generation += 1
+
+    def killPopulation(self) -> None:
+        """
+        Removes species that had unfavorable fitness results and then removes
+        a portion of genomes.
+        :return:
+            - None
+        """
+        # Kills species that did not meet minimum requirements
+        surviving_species = []
+        for specie in self.species:
+            if specie.shouldSurvive():
+                surviving_species.append(specie)
+        self.species = surviving_species
+
+        # Kills a portion of the remaining members in each specie
+        for specie in self.species:
+            specie.killGenomes(self.settings.kill)
+
+    def repopulate(self, fitness_sum: int | float) -> None:
+        """
+        Repopulates the population by breeding new child genomes, clones the
+        best genome or creates fresh genomes.
+        :param fitness_sum: int | float
+        :return:
+            - None
+        """
+        if len(self.species) > 0:
+            # Breeds the surviving populace
+            temp_species = deepcopy(self.species)
+            for specie_key, specie in enumerate(temp_species):
+                if fitness_sum != 0:
+                    offspring = round((specie.fitness_mean / fitness_sum) * (self.population - self.getPopulation()))
+                    fitness_sum -= specie.fitness_mean
+                    for _ in range(offspring):
+                        child = self.breed(self.settings.breed_probabilities, specie_key)
+                        self.classifyGenome(child)
+        else:
+            # Introduces new species and genomes
+            for p in range(self.population):
+                genome = deepcopy(self.best_genome) if p % 3 == 0 else Genome(self.inputs, self.outputs,
+                                                                              self.settings.node_info)
+                genome.mutate(self.settings.mutation_probabilities)
+                self.classifyGenome(genome)
 
     def breed(self, probabilities: dict, specie_key: int) -> Genome:
         """
@@ -214,101 +284,38 @@ class NEAT(object):
             y_member = random.choice(self.species[random.choice(species)].members)
         return genomicCrossover(x_member, y_member)
 
-    def killPopulation(self) -> None:
+    def classifyGenome(self, genome: Genome) -> None:
         """
-        Removes species that had unfavorable fitness results and then removes
-        a portion of genomes.
+        Classifies the genome and groups it with first similar species or creates
+        a new specie.
+        :param genome: Genome
         :return:
             - None
         """
-        surviving_species = []
-        for specie in self.species:
-            if specie.shouldSurvive():
-                surviving_species.append(specie)
-        self.species = surviving_species
-
-        for specie in self.species:
-            specie.killGenomes(self.settings.kill)
-
-    def repopulate(self, fitness_sum: int | float) -> None:
-        """
-        Repopulates the population by breeding new child genomes, clones the
-        best genome or creates fresh genomes.
-        :param fitness_sum: int | float
-        :return:
-            - None
-        """
+        classified = False
         if len(self.species) > 0:
-            temp_species = deepcopy(self.species)
-            for specie_key, specie in enumerate(temp_species):
-                if fitness_sum != 0:
-                    offspring = round((specie.fitness_mean / fitness_sum) * (self.population - self.getPopulation()))
-                    fitness_sum -= specie.fitness_mean
-                    for _ in range(offspring):
-                        child = self.breed(self.settings.breed_probabilities, specie_key)
-                        self.classifyGenome(child)
-        else:
-            for p in range(self.population):
-                genome = deepcopy(self.best_genome) if p % 3 == 0 else Genome(self.inputs, self.outputs,
-                                                                              self.settings.node_info)
-                genome.mutate(self.settings.mutation_probabilities)
-                self.classifyGenome(genome)
-
-    def evolve(self) -> None:
-        """
-        Updates the fitness for each specie, if no progress has been made then
-        mutate, else kill a portion of the population and repopulate.
-        :return:
-            - None
-        """
-        fitness_sum = 0
-        for specie in self.species:
-            specie.updateFitness()
-            fitness_sum += specie.fitness_mean
-
-        if fitness_sum == 0:
             for specie in self.species:
-                for member in specie.members:
-                    member.mutate(self.settings.mutation_probabilities)
-        else:
-            self.killPopulation()
-            self.repopulate(fitness_sum)
-        self.generation += 1
+                distance = genomicDistance(genome, specie.representative, self.settings.distance_weights)
+                if distance <= self.settings.delta_genome_threshold:
+                    specie.members.append(genome)
+                    classified = True
+                    break
+        if not classified:
+            self.species.append(Specie(self.settings.max_fitness_history, [genome]))
 
-    def shouldEvolve(self) -> bool:
+    def updateBestGenome(self) -> None:
         """
-        Checks the settings if the current NEAT meets requirements to
-        continue evolving.
-        :return:
-            - bool - True | False
-        """
-        self.updateFitness()
-        if self.settings.max_generations and self.generation >= self.settings.max_generations:
-            if self.settings.max_fitness and self.best_genome.fitness >= self.settings.max_fitness:
-                return False
-        return True
-
-    def nextGenome(self, filename: str = '') -> None:
-        """
-        Gets the next genome in population, updates counters and
-        saves models at certain intervals.
-        :param filename: str
+        Updates the best genome by searching for the highest fitness from
+        each specie.
         :return:
             - None
         """
-        self.save(filename)
-        specie = self.species[self.current_species]
-        if self.current_genome < len(specie.members) - 1:
-            self.current_genome += 1
-        else:
-            self.current_genome = 0
-            if self.current_species < len(self.species) - 1:
-                self.current_species += 1
-            else:
-                if self.generation + 1 in self.settings.save_intervals:
-                    self.save(f"{filename}_gen_{self.generation + 1}")
-                self.evolve()
-                self.current_species = 0
+        leading_genomes = [specie.representative for specie in self.species]
+        best_genome = leading_genomes[0]
+        for leading_genome in leading_genomes:
+            if leading_genome.fitness > best_genome.fitness:
+                best_genome = leading_genome
+        self.best_genome = deepcopy(best_genome)
 
     def getGenome(self, specie: int = None, genome: int = None) -> Genome:
         """

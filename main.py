@@ -10,8 +10,8 @@ from neat import NEAT
 import mattslib as ml
 import mattslib.pygame as mlpg
 
-__version__ = '1.4.4'
-__date__ = '23/03/2022'
+__version__ = '1.4.5'
+__date__ = '24/03/2022'
 
 # Constants
 WIDTH, HEIGHT = 1120, 640
@@ -23,6 +23,7 @@ MENU_WIDTH, MENU_HEIGHT = ADDON_PANEL[0], NETWORK_HEIGHT - INFO_HEIGHT
 OPTION_WIDTH, OPTION_HEIGHT = WIDTH, HEIGHT
 
 FPS = 40
+display = True
 
 GAME = 'connect4'
 PLAYER_TYPES = ['Human', 'NEAT', '1', '1000', '10000']
@@ -39,8 +40,6 @@ evolution_speed = SPEEDS[-1]
 show_every = SHOW_EVERY[1]
 max_fps = max(FPS, max(game_speed, evolution_speed))
 
-display = True
-
 # Globals - Pygame
 if display:
     os.environ['SDL_VIDEO_WINDOW_POS'] = "0,25"
@@ -56,7 +55,7 @@ if display:
     display.fill(mlpg.BLACK)
     clock = pg.time.Clock()
 
-connect4 = Connect4()
+connect4 = Connect4(GAME_PANEL)
 network = None
 info = None
 menu = None
@@ -151,7 +150,7 @@ def setup() -> None:
         - None
     """
     global connect4, network, info, menu, options, players, neats
-    connect4 = Connect4()
+    connect4 = Connect4(GAME_PANEL)
     network = Network()
     info = Info()
     options = Options()
@@ -551,6 +550,8 @@ def main() -> None:
 
         if not connect4.match:
             if frame_count >= max_fps / speed:
+                if show and not display:
+                    print("Generation:", neats[current_player].generation)
                 for i, player_key in enumerate([current_player, connect4.player_ids[connect4.opponent]]):
                     if players[player_key] == PLAYER_TYPES[1]:
                         current_genome = neats[player_key].getGenome()

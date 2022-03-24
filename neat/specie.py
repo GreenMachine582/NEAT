@@ -8,8 +8,8 @@ from .genome import Genome
 from mattslib.dict import countOccurrence, sortIntoDict
 from mattslib.math_util import mean
 
-__version__ = '1.4.1'
-__date__ = '22/03/2022'
+__version__ = '1.4.2'
+__date__ = '24/03/2022'
 
 
 class Specie(object):
@@ -23,7 +23,7 @@ class Specie(object):
         :param members: list
         """
         self.members = [] if members is None else members
-        self.representative = None
+        self.representative = members[0]
         self.fitness_history = []
         self.fitness_mean = 0
         self.max_fitness_history = max_fitness_history
@@ -58,19 +58,16 @@ class Specie(object):
         sorted_genomes = sorted_genomes[::-1]
         self.members = sorted_genomes[:survived]
 
-    def getRepresentative(self) -> None:
+    def updateRepresentative(self) -> None:
         """
-        Searches through members in specie for leading representative
-        fitness.
+        Searches through members in specie for leading genome with the highest
+        fitness to be the representative.
         :return:
             - None
         """
-        representative = self.members[0]
         for member in self.members:
-            if member.fitness > representative.fitness:
-                representative = member
-        self.representative = representative
-        return representative
+            if member.fitness > self.representative.fitness:
+                self.representative = member
 
     def shouldSurvive(self) -> bool:
         """
