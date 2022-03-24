@@ -527,13 +527,10 @@ def main() -> None:
                 if frame_count >= max_fps / speed:
                     frame_count = 1
 
-                    if players[current_player] == PLAYER_TYPES[1]:
+                    if players[current_player] == PLAYER_TYPES[1] and neats[current_player].shouldEvolve():
                         current_genome = neats[current_player].getGenome()
                     else:
                         current_genome = neats[current_player].best_genome
-
-                    if not neats[current_player].shouldEvolve() and players[current_player] == PLAYER_TYPES[1]:
-                        close()
 
                     possible_move = neatMove(current_genome)
                     connect4.main(possible_move)
@@ -550,10 +547,10 @@ def main() -> None:
 
         if not connect4.match:
             if frame_count >= max_fps / speed:
-                if show and not display:
-                    print("Generation:", neats[current_player].generation)
-                for i, player_key in enumerate([current_player, connect4.player_ids[connect4.opponent]]):
-                    if players[player_key] == PLAYER_TYPES[1]:
+                if players[current_player] == PLAYER_TYPES[1] and neats[current_player].shouldEvolve():
+                    if show:
+                        print("Generation:", neats[current_player].generation + 1)
+                    for i, player_key in enumerate([current_player, connect4.player_ids[connect4.opponent]]):
                         current_genome = neats[player_key].getGenome()
                         current_genome.fitness = calculateFitness(bool(i))
                         neats[player_key].nextGenome(f"ai_{player_key}")

@@ -185,9 +185,10 @@ class NEAT(object):
             - bool - True | False
         """
         self.updateBestGenome()
-        if self.settings.max_generations and self.generation >= self.settings.max_generations:
-            if self.settings.max_fitness and self.best_genome.fitness >= self.settings.max_fitness:
-                return False
+        if self.settings.max_generations != 0 and self.generation >= self.settings.max_generations:
+            return False
+        if self.settings.max_fitness != 0 and self.best_genome.fitness >= self.settings.max_fitness:
+            return False
         return True
 
     def evolve(self) -> None:

@@ -1,5 +1,5 @@
 {
-    "save_intervals": [1, 100, 1000, 2000, 5000, 7500, 10000],
+    "save_intervals": [1, 100, 1000, 2000, 4000, 6000, 8000, 10000],
     "delta_genome_threshold": 0.75,
     "distance_weights": {
         "activation": 0.1,
@@ -19,7 +19,7 @@
         "max_backtrack": 1
     },
     "max_fitness": 0,
-    "max_generations": 0,
+    "max_generations": 10000,
     "max_fitness_history": 30,
     "kill": 0.7,
     "breed_probabilities": {
@@ -42,9 +42,9 @@
             "connection_weight_set": 0.1
         },
         "genome": {
-            "activation": 0.01,
-            "node": 0.01,
-            "connection": 0.09
+            "activation": 0.1,
+            "node": 0.05,
+            "connection": 0.9
         }
     }
 }
