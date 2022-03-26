@@ -10,8 +10,8 @@ from neat import NEAT
 import mattslib as ml
 import mattslib.pygame as mlpg
 
-__version__ = '1.4.5'
-__date__ = '24/03/2022'
+__version__ = '1.4.6'
+__date__ = '26/03/2022'
 
 # Constants
 WIDTH, HEIGHT = 1120, 640
@@ -26,7 +26,7 @@ FPS = 40
 display = True
 
 GAME = 'connect4'
-PLAYER_TYPES = ['Human', 'NEAT', '1', '1000', '10000']
+PLAYER_TYPES = ['Human', 'NEAT', '1', '1000', '6000']
 SHOW_EVERY = ['Genome', 'Generation', 'None']
 SPEEDS = [1, 5, 25, 100, 500]
 DIRECTORY = os.path.dirname(os.path.realpath(__file__))
@@ -42,7 +42,7 @@ max_fps = max(FPS, max(game_speed, evolution_speed))
 
 # Globals - Pygame
 if display:
-    os.environ['SDL_VIDEO_WINDOW_POS'] = "0,25"
+    os.environ['SDL_VIDEO_WINDOW_POS'] = "0,30"
     pg.init()
     display = pg.display.set_mode((WIDTH, HEIGHT), depth=32)
 
@@ -548,12 +548,12 @@ def main() -> None:
         if not connect4.match:
             if frame_count >= max_fps / speed:
                 if players[current_player] == PLAYER_TYPES[1] and neats[current_player].shouldEvolve():
-                    if show:
-                        print("Generation:", neats[current_player].generation + 1)
                     for i, player_key in enumerate([current_player, connect4.player_ids[connect4.opponent]]):
                         current_genome = neats[player_key].getGenome()
                         current_genome.fitness = calculateFitness(bool(i))
                         neats[player_key].nextGenome(f"ai_{player_key}")
+                    if show:
+                        print(f"Generation: 1 - {neats[1].generation + 1}, 2 - {neats[2].generation + 1}")
                 connect4.reset()
 
         if display:

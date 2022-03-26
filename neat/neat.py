@@ -5,52 +5,12 @@ import random
 
 from .genome import Genome
 from .settings import Settings
-from .specie import Specie
+from .specie import Specie, genomicDistance
 from mattslib.dict import countOccurrence, getKeyByWeights
 from mattslib.file import read, write
 
-__version__ = '1.4.3'
-__date__ = '24/03/2022'
-
-
-def genomicDistance(x_member: Genome, y_member: Genome, distance_weights: dict) -> float:
-    """
-    Calculates the distance between genomes by summing the distance between the corresponding genes.
-    :param x_member: Genome
-    :param y_member: Genome
-    :param distance_weights: dict[str: int | float]
-    :return:
-        - distance - float
-    """
-    genomic_distance = 0
-    x_connections = list(x_member.connections)
-    y_connections = list(y_member.connections)
-    connections = countOccurrence(x_connections + y_connections)
-
-    matching_connections = [pos for pos in connections if connections[pos] >= 2]
-    disjoint_connections = [pos for pos in connections if connections[pos] == 1]
-
-    connections_count = len(max(x_connections, y_connections))
-    nodes_count = min(x_member.total_nodes, y_member.total_nodes)
-
-    genomic_distance += distance_weights['node'] * (abs(x_member.total_nodes - y_member.total_nodes) /
-                                                    max(x_member.total_nodes, y_member.total_nodes))
-    genomic_distance += distance_weights['connection'] * (len(disjoint_connections) / connections_count)
-
-    weight_diff = 0
-    for pos in matching_connections:
-        weight_diff += abs(x_member.connections[pos].weight - y_member.connections[pos].weight)
-
-    genomic_distance += distance_weights['weight'] * (weight_diff / len(matching_connections))
-
-    activation_diff, bias_diff = 0, 0
-    for node in range(nodes_count):
-        activation_diff += 1 if x_member.nodes[node].activation != y_member.nodes[node].activation else 0
-        bias_diff += abs(x_member.nodes[node].bias - y_member.nodes[node].bias)
-
-    genomic_distance += distance_weights['activation'] * (activation_diff / nodes_count)
-    genomic_distance += distance_weights['bias'] * (bias_diff / nodes_count)
-    return genomic_distance
+__version__ = '1.4.4'
+__date__ = '26/03/2022'
 
 
 def genomicCrossover(x_member: Genome, y_member: Genome) -> Genome:
@@ -231,8 +191,9 @@ class NEAT(object):
         self.species = surviving_species
 
         # Kills a portion of the remaining members in each specie
-        for specie in self.species:
-            specie.killGenomes(self.settings.kill)
+        for i, specie in enumerate(self.species):
+            remove_duplicate = True if self.generation % 50 == 0 else False
+            specie.killGenomes(remove_duplicate)
 
     def repopulate(self, fitness_sum: int | float) -> None:
         """
@@ -296,13 +257,15 @@ class NEAT(object):
         classified = False
         if len(self.species) > 0:
             for specie in self.species:
-                distance = genomicDistance(genome, specie.representative, self.settings.distance_weights)
+                representative = specie.members[specie.representative]
+                distance = genomicDistance(genome, representative, self.settings.distance_weights)
                 if distance <= self.settings.delta_genome_threshold:
                     specie.members.append(genome)
+                    specie.distances.append(distance)
                     classified = True
                     break
         if not classified:
-            self.species.append(Specie(self.settings.max_fitness_history, [genome]))
+            self.species.append(Specie(self.settings, genome))
 
     def updateBestGenome(self) -> None:
         """
@@ -311,7 +274,7 @@ class NEAT(object):
         :return:
             - None
         """
-        leading_genomes = [specie.representative for specie in self.species]
+        leading_genomes = [specie.members[specie.representative] for specie in self.species]
         best_genome = leading_genomes[0]
         for leading_genome in leading_genomes:
             if leading_genome.fitness > best_genome.fitness:

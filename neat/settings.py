@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from mattslib.file import read, write
 
-__version__ = '1.4.2'
-__date__ = '23/03/2022'
+__version__ = '1.4.3'
+__date__ = '26/03/2022'
 
 
 class Settings(object):
@@ -20,6 +20,7 @@ class Settings(object):
         """
         self.save_intervals = []
         self.delta_genome_threshold = 0.75
+        self.delta_duplicate_threshold = 0.001
         self.distance_weights = {
             'activation': 0.1,
             'node': 0.5,
