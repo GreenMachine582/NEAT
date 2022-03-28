@@ -548,12 +548,14 @@ def main() -> None:
         if not connect4.match:
             if frame_count >= max_fps / speed:
                 if players[current_player] == PLAYER_TYPES[1] and neats[current_player].shouldEvolve():
+                    gen = f"Generation:"
                     for i, player_key in enumerate([current_player, connect4.player_ids[connect4.opponent]]):
                         current_genome = neats[player_key].getGenome()
                         current_genome.fitness = calculateFitness(bool(i))
                         neats[player_key].nextGenome(f"ai_{player_key}")
+                        gen += f" {player_key} - {neats[player_key].generation}"
                     if show:
-                        print(f"Generation: 1 - {neats[1].generation + 1}, 2 - {neats[2].generation + 1}")
+                        print(gen)
                 connect4.reset()
 
         if display:

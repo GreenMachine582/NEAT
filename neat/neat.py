@@ -94,6 +94,7 @@ class NEAT(object):
         self.current_genome = 0
 
         self.best_genome = None
+        self.fitness_sum = 0
 
     def generate(self, inputs: int, outputs: int, population: int = 100) -> None:
         """
@@ -160,20 +161,19 @@ class NEAT(object):
         """
 
         # Calculates the generation fitness
-        fitness_sum = 0
+        self.fitness_sum = 0
         for specie in self.species:
-            specie.updateRepresentative()
             specie.updateFitness()
-            fitness_sum += specie.fitness_mean
+            self.fitness_sum += specie.fitness_mean
 
         # Mutates all genomes since fitness didn't reach minimum requirements
-        if fitness_sum <= 0:
+        if self.fitness_sum <= 0:
             for specie in self.species:
                 for member in specie.members:
                     member.mutate(self.settings.mutation_probabilities)
         else:
             self.killPopulation()
-            self.repopulate(fitness_sum)
+            self.repopulate()
         self.generation += 1
 
     def killPopulation(self) -> None:
@@ -188,28 +188,31 @@ class NEAT(object):
         for specie in self.species:
             if specie.shouldSurvive():
                 surviving_species.append(specie)
+            else:
+                self.fitness_sum -= specie.fitness_mean
         self.species = surviving_species
 
         # Kills a portion of the remaining members in each specie
         for i, specie in enumerate(self.species):
-            remove_duplicate = True if self.generation % 50 == 0 else False
+            remove_duplicate = True if self.generation % 50 == 0 and self.generation != 0 else False
             specie.killGenomes(remove_duplicate)
+            specie.updateRepresentative()
 
-    def repopulate(self, fitness_sum: int | float) -> None:
+    def repopulate(self) -> None:
         """
         Repopulates the population by breeding new child genomes, clones the
         best genome or creates fresh genomes.
-        :param fitness_sum: int | float
         :return:
             - None
         """
-        if len(self.species) > 0:
+        if self.species:
             # Breeds the surviving populace
             temp_species = deepcopy(self.species)
             for specie_key, specie in enumerate(temp_species):
-                if fitness_sum != 0:
-                    offspring = round((specie.fitness_mean / fitness_sum) * (self.population - self.getPopulation()))
-                    fitness_sum -= specie.fitness_mean
+                if self.fitness_sum != 0:
+                    population_diff = self.population - self.getPopulation()
+                    offspring = round((specie.fitness_mean / self.fitness_sum) * population_diff)
+                    self.fitness_sum -= specie.fitness_mean
                     for _ in range(offspring):
                         child = self.breed(self.settings.breed_probabilities, specie_key)
                         self.classifyGenome(child)
@@ -261,7 +264,6 @@ class NEAT(object):
                 distance = genomicDistance(genome, representative, self.settings.distance_weights)
                 if distance <= self.settings.delta_genome_threshold:
                     specie.members.append(genome)
-                    specie.distances.append(distance)
                     classified = True
                     break
         if not classified:

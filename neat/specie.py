@@ -50,23 +50,21 @@ def genomicDistance(x_member: Genome, y_member: Genome, distance_weights: dict) 
 
     genomic_distance += distance_weights['activation'] * (activation_diff / nodes_count)
     genomic_distance += distance_weights['bias'] * (bias_diff / nodes_count)
-    return genomic_distance
+    return round(genomic_distance, 7)
 
 
 class Specie(object):
     """
     Separates the population into species with similar genomic distance.
     """
-    def __init__(self, settings: Settings, member: Genome, distance: float = 0):
+    def __init__(self, settings: Settings, member: Genome):
         """
         Initiates the Specie object with given values.
         :param settings: Settings
         :param member: Genome
-        :param distance: float
         """
         self.settings = settings
         self.members = [member]
-        self.distances = [distance]
         self.representative = 0
         self.fitness_history = []
         self.fitness_mean = 0
@@ -97,7 +95,16 @@ class Specie(object):
         max_survive = int(math.ceil((1 - self.settings.kill) * len(self.members))) if not elitism else 1
 
         if remove_duplicate:
-            self.removeDuplicate()
+            distances = self.getDistances()
+            duplicate_genomes = []
+
+            for genome_key, distance in enumerate(distances):
+                if genome_key != self.representative and distance <= self.settings.delta_duplicate_threshold:
+                    duplicate_genomes.append(genome_key)
+
+            duplicate_genomes = duplicate_genomes[::-1]
+            for genome_key in duplicate_genomes:
+                self.members.pop(genome_key)
 
         ids = [i for i in range(len(self.members))]
         sorted_ids = sortIntoDict(ids, sort_with=self.getAllFitnesses())
@@ -108,55 +115,9 @@ class Specie(object):
             for member_id in sorted_ids[fitness_key]:
                 if len(surviving_members) < max_survive:
                     surviving_members.append(self.members[member_id])
-                    surviving_distances.append(self.distances[member_id])
                 else:
                     break
-        self.representative = 0
         self.members = surviving_members
-        self.distances = surviving_distances
-
-    def removeDuplicate(self):
-        ids = [i for i in range(len(self.members))]
-        sorted_ids = sortIntoDict(ids, sort_with=self.distances)
-        sorted_distance_keys = sorted(list(sorted_ids.keys()))
-
-        duplicate_genomes = []
-        # for distance in sorted_distance_keys:
-        #     if distance != 0:
-        #         for genome_a in range(len(sorted_ids[distance]) - 1):
-        #             member_id = sorted_ids[distance][genome_a]
-        #             for genome_b in range(genome_a + 1, len(sorted_ids[distance])):
-        #                 if member_id not in duplicate_genomes:
-        #                     duplicate_distance = genomicDistance(self.members[member_id],
-        #                                                          self.members[sorted_ids[distance][genome_b]],
-        #                                                          self.settings.distance_weights)
-        #                     if duplicate_distance <= self.settings.delta_duplicate_threshold:
-        #                         print(f"Duplicate_With_Same_Distance: {distance}, {duplicate_distance}")
-        #                         duplicate_genomes.append(member_id)
-        for i in range(1, len(sorted_distance_keys)):
-            distance_a = sorted_distance_keys[i]
-            distance_b = sorted_distance_keys[i - 1]
-            if distance_a != 0 and distance_b != 0:
-                if abs(distance_a - distance_b) <= self.settings.delta_duplicate_threshold:
-                    duplicate_distance = genomicDistance(self.members[sorted_ids[distance_a][0]],
-                                                         self.members[sorted_ids[distance_b][0]],
-                                                         self.settings.distance_weights)
-                    if duplicate_distance <= self.settings.delta_duplicate_threshold:
-                        for member_id in sorted_ids[distance_b]:
-                            if member_id not in duplicate_genomes:
-                                print(f"Duplicate_With_Different_Distance: {distance_a} - {distance_b}",
-                                      duplicate_distance)
-                                duplicate_genomes.append(member_id)
-
-        if duplicate_genomes:
-            temp_members = []
-            temp_distances = []
-            for i in range(len(self.members)):
-                if i not in duplicate_genomes:
-                    temp_members.append(self.members[i])
-                    temp_distances.append(self.distances[i])
-            self.members = temp_members
-            self.distances = temp_distances
 
     def updateRepresentative(self) -> None:
         """
@@ -165,14 +126,23 @@ class Specie(object):
         :return:
             - None
         """
-        temp_representative = self.representative
         for i, member in enumerate(self.members):
             if member.fitness > self.members[self.representative].fitness:
                 self.representative = i
-        self.distances[temp_representative] = genomicDistance(self.members[temp_representative],
-                                                              self.members[self.representative],
-                                                              self.settings.distance_weights)
-        self.distances[self.representative] = 0
+
+    def getDistances(self) -> list:
+        """
+        Gets the genomic distance for each member in respects to the representative.
+        :return:
+            - distances - list[int | float]
+        """
+        distances = []
+        for member_key, member in enumerate(self.members):
+            distance = 0
+            if member_key != self.representative:
+                distance = genomicDistance(member, self.members[self.representative], self.settings.distance_weights)
+            distances.append(distance)
+        return distances
 
     def shouldSurvive(self) -> bool:
         """
