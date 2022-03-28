@@ -99,7 +99,7 @@ class Specie(object):
             duplicate_genomes = []
 
             for genome_key, distance in enumerate(distances):
-                if genome_key != self.representative and distance <= self.settings.delta_duplicate_threshold:
+                if genome_key != self.representative and distance <= self.settings.duplicate_distance_threshold:
                     duplicate_genomes.append(genome_key)
 
             duplicate_genomes = duplicate_genomes[::-1]

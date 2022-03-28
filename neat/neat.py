@@ -194,7 +194,9 @@ class NEAT(object):
 
         # Kills a portion of the remaining members in each specie
         for i, specie in enumerate(self.species):
-            remove_duplicate = True if self.generation % 50 == 0 and self.generation != 0 else False
+            remove_duplicate = False
+            if self.generation % self.settings.remove_duplicate_interval == 0 and self.generation != 0:
+                remove_duplicate = True
             specie.killGenomes(remove_duplicate)
             specie.updateRepresentative()
 

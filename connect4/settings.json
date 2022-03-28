@@ -1,7 +1,6 @@
 {
     "save_intervals": [1, 100, 1000, 2000, 4000, 6000, 8000, 10000],
     "delta_genome_threshold": 0.75,
-    "delta_duplicate_threshold": 0.0001,
     "distance_weights": {
         "activation": 0.1,
         "node": 0.5,
@@ -23,6 +22,8 @@
     "max_generations": 10000,
     "max_fitness_history": 30,
     "kill": 0.7,
+    "remove_duplicate_interval": 50,
+    "duplicate_distance_threshold": 0.0001,
     "breed_probabilities": {
         "crossover": {
             "interspecies": 0.005,

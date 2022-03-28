@@ -20,7 +20,6 @@ class Settings(object):
         """
         self.save_intervals = []
         self.delta_genome_threshold = 0.75
-        self.delta_duplicate_threshold = 0.001
         self.distance_weights = {
             'activation': 0.1,
             'node': 0.5,
@@ -39,6 +38,8 @@ class Settings(object):
         self.max_fitness_history = 30
 
         self.kill = 0.7
+        self.remove_duplicate_interval = 50
+        self.duplicate_distance_threshold = 0.001
 
         self.breed_probabilities = {
             'crossover': {'interspecies': 0.01,

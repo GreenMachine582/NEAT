@@ -553,7 +553,7 @@ def main() -> None:
                         current_genome = neats[player_key].getGenome()
                         current_genome.fitness = calculateFitness(bool(i))
                         neats[player_key].nextGenome(f"ai_{player_key}")
-                        gen += f" {player_key} - {neats[player_key].generation}"
+                        gen += f" {player_key} - {neats[player_key].generation + 1}"
                     if show:
                         print(gen)
                 connect4.reset()
