@@ -26,11 +26,14 @@ OPTION_WIDTH, OPTION_HEIGHT = WIDTH, HEIGHT
 FPS = 40
 display = False
 
-GAME = 'connect4'
+ENVIRONMENT = 'connect4'
 PLAYER_TYPES = ['Human', 'NEAT', '1', '1000', '6000']
 SHOW_EVERY = ['Genome', 'Generation', 'None']
 SPEEDS = [1, 5, 25, 100, 500]
-DIRECTORY = os.path.dirname(os.path.realpath(__file__))
+
+ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
+ENVIRONMENT_DIR = f"{ROOT_DIR}\\{ENVIRONMENT}"
+MODELS_DIR = f"{ENVIRONMENT_DIR}\\models\\"
 
 
 # Globals - Defaults
@@ -94,14 +97,16 @@ def setupAi(player_id: int, inputs: int = 4, outputs: int = 1, population: int =
         - neat - NEAT
     """
     if players[player_id] == PLAYER_TYPES[1]:
-        if os.path.isfile(f"{DIRECTORY}\\{GAME}\\ai_{player_id}.neat"):
-            neat = NEAT.load(f"ai_{player_id}", f"{DIRECTORY}\\{GAME}")
+        file = f"{MODELS_DIR}ai_{player_id}.neat"
+        if os.path.isfile(file):
+            neat = NEAT.load(file)
             return neat
     else:
-        if os.path.isfile(f"{DIRECTORY}\\{GAME}\\ai_{player_id}_gen_{players[player_id]}.neat"):
-            neat = NEAT.load(f"ai_{player_id}_gen_{players[player_id]}", f"{DIRECTORY}\\{GAME}")
+        file = MODELS_DIR + f"ai_{player_id}_gen_{players[player_id]}.neat"
+        if os.path.isfile(file):
+            neat = NEAT.load(file)
             return neat
-    neat = NEAT(DIRECTORY, f"\\{GAME}")
+    neat = NEAT(ENVIRONMENT_DIR)
     neat.generate(inputs, outputs, population=population)
     return neat
 
@@ -157,7 +162,7 @@ def close() -> None:
     """
     for player_id in players:
         if players[player_id] == PLAYER_TYPES[1]:
-            neats[player_id].save(f"\\ai_{player_id}")
+            neats[player_id].save(f"{MODELS_DIR}ai_{player_id}.neat")
     pg.quit()
     quit()
 
@@ -432,7 +437,7 @@ def main() -> None:
                     if players[player_key] == PLAYER_TYPES[1] and neats[player_key].shouldEvolve():
                         current_genome = neats[player_key].getGenome()
                         current_genome.fitness = fitness[i]
-                        neats[player_key].nextGenome(f"ai_{player_key}")
+                        neats[player_key].nextGenome(f"{MODELS_DIR}ai_{player_key}.neat")
                         generation_update += f"{neats[player_key].generation}-{player_key}-{neats[player_key].getPopulation()}, "
                 if not display and show:
                     print(generation_update)

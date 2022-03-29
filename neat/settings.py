@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from mattslib.file import read, write
 
-__version__ = '1.4.4'
-__date__ = '28/03/2022'
+__version__ = '1.4.5'
+__date__ = '29/03/2022'
 
 
 class Settings(object):
@@ -11,11 +11,11 @@ class Settings(object):
     Contains the default settings for NEAT, also has options
     to save and load values.
     """
-    def __init__(self, directory: str, load: bool = True):
+    def __init__(self, environment_dir: str, load: bool = True):
         """
         Initiates the object with default values and loads required
         settings from given file directory.
-        :param directory: str
+        :param environment_dir: str
         :param load: bool
         """
         self.save_intervals = []
@@ -59,23 +59,24 @@ class Settings(object):
                        'connection': 0.09},
         }
 
-        self.load(directory) if load else self.save(directory)
+        if environment_dir:
+            self.load(environment_dir) if load else self.save(environment_dir)
 
-    def load(self, directory='') -> None:
+    def load(self, environment_dir: str) -> None:
         """
         Loads the file and converts the json dict and updates
         the class.
-        :param directory: str
+        :param environment_dir: str
         :return:
             - None
         """
-        self.__dict__.update(read(f"{directory}\\settings.json"))
+        self.__dict__.update(read(f"{environment_dir}\\settings.json"))
 
-    def save(self, directory='') -> None:
+    def save(self, environment_dir: str) -> None:
         """
         Converts the class information into a json writable.
-        :param directory: str
+        :param environment_dir: str
         :return:
             - None
         """
-        write(self.__dict__, f"{directory}\\settings.json")
+        write(self.__dict__, f"{environment_dir}\\settings.json")

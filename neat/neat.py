@@ -10,7 +10,7 @@ from mattslib.dict import countOccurrence, getKeyByWeights
 from mattslib.file import read, write
 
 __version__ = '1.4.5'
-__date__ = '28/03/2022'
+__date__ = '29/03/2022'
 
 
 def genomicCrossover(x_member: Genome, y_member: Genome) -> Genome:
@@ -74,15 +74,12 @@ class NEAT(object):
      and its parameters and attributes are evolved as genes.
     """
 
-    def __init__(self, directory: str = '', game_dir: str = ''):
+    def __init__(self, environment_dir: str):
         """
         Initiates the NEAT object with default and given values.
-        :param directory: str
-        :param game_dir: str
+        :param environment_dir: str
         """
-        self.directory = directory
-        self.game_dir = directory + game_dir
-        self.settings = Settings(self.game_dir)
+        self.settings = Settings(environment_dir)
         self.inputs = 0
         self.outputs = 0
 
@@ -116,7 +113,7 @@ class NEAT(object):
 
         self.best_genome = self.species[0].members[0]
 
-    def nextGenome(self, filename: str = '') -> None:
+    def nextGenome(self, filename: str) -> None:
         """
         Gets the next genome in population, updates counters and
         saves models at certain intervals.
@@ -315,22 +312,21 @@ class NEAT(object):
                      'current_genome': self.current_genome+1, 'fitness': self.getGenome().fitness}
         return neat_info
 
-    def save(self, filename: str) -> None:
+    def save(self, file_dir: str) -> None:
         """
         Saves the NEAT object by writing to file.
-        :param filename: str
+        :param file_dir: str
         :return:
             - None
         """
-        write(self, f"{self.game_dir}\\{filename}.neat")
+        write(self, file_dir)
 
     @staticmethod
-    def load(filename: str, directory: str = '') -> NEAT:
+    def load(file_dir: str) -> NEAT:
         """
         Loads the NEAT object by reading the file.
-        :param filename: str
-        :param directory: str
+        :param file_dir: str
         :return:
             - neat - NEAT
         """
-        return read(f"{directory}\\{filename}.neat")
+        return read(file_dir)
