@@ -24,7 +24,7 @@ MENU_WIDTH, MENU_HEIGHT = ADDON_PANEL[0], NETWORK_BOX[1] - INFO_BOX[1]
 OPTION_WIDTH, OPTION_HEIGHT = WIDTH, HEIGHT
 
 FPS = 40
-display = True
+display = False
 
 GAME = 'connect4'
 PLAYER_TYPES = ['Human', 'NEAT', '1', '1000', '6000']
@@ -427,11 +427,15 @@ def main() -> None:
         if not connect4.match:
             if frame_count >= max_fps / speed:
                 fitness = connect4.fitnessEvaluation()
+                generation_update = 'Generation: '
                 for i, player_key in enumerate([current_player, connect4.PLAYERS[connect4.opponent]['id']]):
                     if players[player_key] == PLAYER_TYPES[1] and neats[player_key].shouldEvolve():
                         current_genome = neats[player_key].getGenome()
                         current_genome.fitness = fitness[i]
                         neats[player_key].nextGenome(f"ai_{player_key}")
+                        generation_update += f"{neats[player_key].generation}-{player_key}-{neats[player_key].getPopulation()}, "
+                if not display and show:
+                    print(generation_update)
                 connect4.reset()
 
         if display:

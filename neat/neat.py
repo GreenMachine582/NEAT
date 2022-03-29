@@ -124,7 +124,6 @@ class NEAT(object):
         :return:
             - None
         """
-        self.save(filename)
         specie = self.species[self.current_species]
         if self.current_genome < len(specie.members) - 1:
             self.current_genome += 1
@@ -133,6 +132,7 @@ class NEAT(object):
             if self.current_species < len(self.species) - 1:
                 self.current_species += 1
             else:
+                self.save(filename)
                 if self.generation + 1 in self.settings.save_intervals:
                     self.save(f"{filename}_gen_{self.generation + 1}")
                 self.evolve()

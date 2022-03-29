@@ -173,10 +173,10 @@ class Connect4:
         :return:
             - fitness - tuple[int, int]
         """
-        max_fitness = (self.ROWS * self.COLUMNS) - (2 * self.LENGTH) - 1
-        if self.result == 1:
-            return max_fitness - self.turn, -max_fitness + self.turn
-        return 0, 0
+        min_required_moves = (2 * self.LENGTH) - 1
+        winner = max(0, (self.ROWS * self.COLUMNS) - self.turn - min_required_moves)
+        loser = max(0, self.turn - min_required_moves)
+        return winner, loser
 
     def draw(self, surface: Any) -> None:
         """
