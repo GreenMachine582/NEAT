@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import mattslib.pygame as mlpg
 
-__version__ = '1.3.3'
-__date__ = '24/03/2022'
+__version__ = '1.4.1'
+__date__ = '29/03/2022'
 
 
 class Piece:
@@ -78,12 +78,11 @@ class Connect4:
     """
 
     ROWS, COLUMNS = 6, 7
-    PLAYERS = {0: 'Red', 1: "Yellow"}
-    COLOURS = {0: mlpg.RED, 1: mlpg.YELLOW}
+    PLAYERS = {0: {'id': 1, 'name': 'Red', 'colour': mlpg.RED}, 1: {'id': 2, 'name': 'Yellow', 'colour': mlpg.YELLOW}}
     EMPTY = mlpg.WHITE
     INVALID_MOVE = -2
     LENGTH = 4
-    GAME_STATES = {-2: 'Invalid move', -1: '', 0: 'Draw', 1: 'Player 1 Wins', 2: 'Player 2 Wins'}
+    GAME_STATES = {-2: 'Invalid move', -1: '', 0: 'Draw', 1: 'Win'}
     BOARDER = 10
 
     def __init__(self, game_dims):
@@ -101,15 +100,13 @@ class Connect4:
         self.turn = 0
         self.result = -1
 
-        self.player_ids = [1, 2]
-
         self.board_background = mlpg.Rect((self.game_width / 2, self.game_height / 2), self.colour['background'],
                                           [self.game_width - (self.BOARDER * 2), self.game_height - (self.BOARDER * 2)])
-        self.player_text = mlpg.Message(f"Player {self.player_ids[self.current_player]} - {self.PLAYERS[self.current_player]}'s turn!",
+        self.player_text = mlpg.Message(f"{self.PLAYERS[self.current_player]['name']}'s turn!",
                                         (self.game_width / 2, 60), size=40)
 
-        self.board = [[Piece((h, j), self.ROWS, self.COLUMNS, self.EMPTY, self.game_height) for j in range(self.COLUMNS)]
-                      for h in range(self.ROWS)]
+        self.board = [[Piece((h, j), self.ROWS, self.COLUMNS, self.EMPTY, self.game_height)
+                       for j in range(self.COLUMNS)] for h in range(self.ROWS)]
 
     def reset(self) -> None:
         """
@@ -122,10 +119,9 @@ class Connect4:
                 self.board[h][j].update(colour=self.EMPTY)
         self.match = True
         self.turn = 0
-        self.current_player = 0
+        self.current_player = self.opponent
         self.opponent = abs(self.current_player - 1)
         self.result = -1
-        self.player_ids = self.player_ids[::-1]
 
     def draw(self, surface: Any) -> None:
         """
@@ -134,7 +130,7 @@ class Connect4:
         :return:
             - None
         """
-        self.player_text.update(text=f"Player {self.player_ids[self.current_player]} - {self.PLAYERS[self.current_player]}'s turn!")
+        self.player_text.update(text=f"{self.PLAYERS[self.current_player]['name']}'s turn!")
 
         surface.fill(mlpg.changeColour(self.colour['background'], -70))
         self.board_background.draw(surface)
@@ -150,7 +146,7 @@ class Connect4:
         :return:
             - None
         """
-        self.board[move[0]][move[1]].update(colour=self.COLOURS[self.current_player])
+        self.board[move[0]][move[1]].update(colour=self.PLAYERS[self.current_player]['colour'])
         self.turn += 1
 
     def getPossibleMove(self, possible_move: int) -> tuple:
@@ -181,8 +177,7 @@ class Connect4:
             for n in range(1, self.LENGTH):
                 a, b = move[0] + (n * direction[0]), move[1] + (n * direction[1])
                 if 0 <= a < self.ROWS and 0 <= b < self.COLUMNS:
-                    piece = self.board[a][b]
-                    if piece.colour == self.COLOURS[self.current_player]:
+                    if self.board[a][b].colour == self.PLAYERS[self.current_player]['colour']:
                         self.board[a][b].update(highlight_colour=colour)
                     else:
                         break
@@ -217,19 +212,19 @@ class Connect4:
                 connection_count = 0
                 count_connections = True
                 if directions[direction_pair][direction] is not None:
-                    directions[direction_pair][direction].append(self.player_ids[self.current_player])
+                    directions[direction_pair][direction].append(self.PLAYERS[self.current_player]['id'])
                     for n in range(1, self.LENGTH):
                         a, b = move[0] + (n * direction[0]), move[1] + (n * direction[1])
                         if 0 <= a < self.ROWS and 0 <= b < self.COLUMNS:
                             piece = self.board[a][b]
-                            if piece.colour == self.COLOURS[self.current_player]:
-                                directions[direction_pair][direction].append(self.player_ids[self.current_player])
+                            if piece.colour == self.PLAYERS[self.current_player]['colour']:
+                                directions[direction_pair][direction].append(self.PLAYERS[self.current_player]['id'])
                                 if count_connections:
                                     connection_count += 1
                             else:
                                 count_connections = False
-                                if piece.colour == self.COLOURS[self.opponent]:
-                                    directions[direction_pair][direction].append(self.opponent)
+                                if piece.colour == self.PLAYERS[self.opponent]['colour']:
+                                    directions[direction_pair][direction].append(self.PLAYERS[self.opponent]['id'])
                                 elif piece.colour == self.EMPTY:
                                     directions[direction_pair][direction].append(0)
                         else:
@@ -254,7 +249,7 @@ class Connect4:
                 win = True
         if win:
             self.match = False
-            self.result = self.player_ids[self.current_player]
+            self.result = 1
             return
 
         for row in self.board:
@@ -267,6 +262,17 @@ class Connect4:
             self.result = 0
         else:
             self.result = -1
+
+    def fitnessEvaluation(self) -> tuple:
+        """
+        Calculates the fitness score with match results.
+        :return:
+            - fitness - tuple[int, int]
+        """
+        max_fitness = (self.ROWS * self.COLUMNS) - (2 * self.LENGTH) - 1
+        if self.result == 1:
+            return max_fitness - self.turn, -max_fitness + self.turn
+        return 0, 0
 
     def main(self, possible_move: int) -> None:
         """

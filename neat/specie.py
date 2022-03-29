@@ -9,8 +9,8 @@ from .genome import Genome
 from mattslib.dict import countOccurrence, sortIntoDict
 from mattslib.math_util import mean
 
-__version__ = '1.4.3'
-__date__ = '26/03/2022'
+__version__ = '1.4.4'
+__date__ = '28/03/2022'
 
 
 def genomicDistance(x_member: Genome, y_member: Genome, distance_weights: dict) -> float:

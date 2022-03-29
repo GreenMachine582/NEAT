@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from mattslib.file import read, write
 
-__version__ = '1.4.3'
-__date__ = '26/03/2022'
+__version__ = '1.4.4'
+__date__ = '28/03/2022'
 
 
 class Settings(object):

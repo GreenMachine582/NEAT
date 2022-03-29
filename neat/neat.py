@@ -9,8 +9,8 @@ from .specie import Specie, genomicDistance
 from mattslib.dict import countOccurrence, getKeyByWeights
 from mattslib.file import read, write
 
-__version__ = '1.4.4'
-__date__ = '26/03/2022'
+__version__ = '1.4.5'
+__date__ = '28/03/2022'
 
 
 def genomicCrossover(x_member: Genome, y_member: Genome) -> Genome:
