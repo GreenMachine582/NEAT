@@ -5,6 +5,7 @@ import pygame as pg
 import random
 
 from connect4 import Connect4
+from connect4 import visualize
 from neat import NEAT
 
 import mattslib as ml
@@ -17,9 +18,9 @@ __date__ = '29/03/2022'
 WIDTH, HEIGHT = 1120, 640
 GAME_PANEL = (HEIGHT, HEIGHT)
 ADDON_PANEL = (WIDTH - GAME_PANEL[0], HEIGHT)
-NETWORK_WIDTH, NETWORK_HEIGHT = ADDON_PANEL[0], ADDON_PANEL[1] * (1 / 2)
-INFO_WIDTH, INFO_HEIGHT = ADDON_PANEL[0], 80
-MENU_WIDTH, MENU_HEIGHT = ADDON_PANEL[0], NETWORK_HEIGHT - INFO_HEIGHT
+NETWORK_BOX = (ADDON_PANEL[0], ADDON_PANEL[1] * (1 / 2))
+INFO_BOX = (ADDON_PANEL[0], 80)
+MENU_WIDTH, MENU_HEIGHT = ADDON_PANEL[0], NETWORK_BOX[1] - INFO_BOX[1]
 OPTION_WIDTH, OPTION_HEIGHT = WIDTH, HEIGHT
 
 FPS = 40
@@ -48,8 +49,8 @@ if display:
 
     pg.display.set_caption("Connect 4 with NEAT - v" + __version__)
     game_display = pg.Surface(GAME_PANEL)
-    network_display = pg.Surface((NETWORK_WIDTH, NETWORK_HEIGHT))
-    info_display = pg.Surface((INFO_WIDTH, INFO_HEIGHT))
+    network_display = pg.Surface(NETWORK_BOX)
+    info_display = pg.Surface(INFO_BOX)
     menu_display = pg.Surface((MENU_WIDTH, MENU_HEIGHT))
     options_display = pg.Surface((OPTION_WIDTH, OPTION_HEIGHT))
     display.fill(mlpg.BLACK)
@@ -138,8 +139,8 @@ def setup() -> None:
     """
     global connect4, network, info, menu, options, players, neats
     connect4 = Connect4(GAME_PANEL)
-    network = Network()
-    info = Info()
+    network = visualize.Network(NETWORK_BOX)
+    info = visualize.Info(INFO_BOX)
     options = Options()
     menu = Menu()
     for player_id in players:
@@ -159,123 +160,6 @@ def close() -> None:
             neats[player_id].save(f"\\ai_{player_id}")
     pg.quit()
     quit()
-
-
-class Network:
-    """
-    Creates and draws the visual of the current genome in a neural network form.
-    """
-
-    BOARDER = 40
-    SPACING = 1
-
-    def __init__(self):
-        self.active = True
-        self.visible = True
-        self.colour = {'background': mlpg.WHITE,
-                       'input': mlpg.BLUE, 'output': mlpg.RED, 'hidden': mlpg.BLACK,
-                       'active': mlpg.GREEN, 'deactivated': mlpg.RED}
-        self.network = {}
-        self.radius = 5
-
-    def generate(self, current_genome: Genome, width: int | float = None, height: int | float = None) -> None:
-        """
-        Creates the neural network visual of the current genome.
-        :param current_genome:
-        :param width:
-        :param height:
-        :return:
-        """
-        if width is None:
-            width = NETWORK_WIDTH - (2 * self.BOARDER)
-        if height is None:
-            height = NETWORK_HEIGHT - (2 * self.BOARDER)
-
-        self.network = {}
-        node_depths = current_genome.getNodesByDepth()
-        node_depths = ml.dict.removeKeys(node_depths)
-        connections = current_genome.connections
-
-        for d, depth in enumerate(node_depths):
-            nodes_in_depth = len(node_depths[depth])
-            for i, node_index in enumerate(node_depths[depth]):
-                node_type = current_genome.nodes[node_index].layer_type
-                pos = (int(self.BOARDER + width * (d / (len(node_depths) - 1))),
-                       int(self.BOARDER + height * ((1/2) if nodes_in_depth <= 1 else (i / (nodes_in_depth - 1)))))
-                self.network[node_index] = {'pos': pos, 'colour': self.colour[node_type], 'connections': []}
-
-        for pos in connections:
-            colour = self.colour['active'] if connections[pos].active else self.colour['deactivated']
-            connection = {'start': self.network[pos[0]]['pos'], 'end': self.network[pos[1]]['pos'], 'colour': colour,
-                          'thickness': int(max(3, min(abs(connections[pos].weight), 1)))}
-            self.network[pos[0]]['connections'].append(connection)
-
-    def draw(self, surface: Any) -> None:
-        """
-        Draws the neural network of the current genome.
-        :param surface: Any
-        :return:
-            - None
-        """
-        surface.fill(self.colour['background'])
-        for node in self.network:
-            for connection in self.network[node]['connections']:
-                pg.draw.line(surface, connection['colour'], connection['start'], connection['end'],
-                             connection['thickness'])
-        for node in self.network:
-            pg.draw.circle(surface, self.network[node]['colour'], self.network[node]['pos'], self.radius)
-
-
-class Info:
-    """
-    Info is a class that handles updating and drawing the neat information.
-    """
-    BOARDER = 20
-
-    def __init__(self):
-        self.active = True
-        self.visible = True
-        self.colour = {'background': [200, 200, 200]}
-
-        self.header = {}
-
-        self.header = {'generation': mlpg.Message("Generation:", (self.BOARDER, self.BOARDER), align='ml'),
-                       'specie': mlpg.Message("Species:", (self.BOARDER, INFO_HEIGHT - self.BOARDER), align='ml'),
-                       'genome': mlpg.Message(":Genome", (INFO_WIDTH - self.BOARDER, self.BOARDER), align='mr'),
-                       'fitness': mlpg.Message(":Fitness", (INFO_WIDTH - self.BOARDER, INFO_HEIGHT - self.BOARDER),
-                                               align='mr')}
-        self.data = {'generation': mlpg.Message(0, (150, self.BOARDER), align='ml'),
-                     'species': mlpg.Message(0, (150, INFO_HEIGHT - self.BOARDER), align='ml'),
-                     'genome': mlpg.Message(0, (360, self.BOARDER), align='mr'),
-                     'fitness': mlpg.Message(0, (360, INFO_HEIGHT - self.BOARDER), align='mr')}
-
-    def update(self, neat_info: dict) -> None:
-        """
-        Updates the data texts with neat information.
-        :param neat_info: dict[str: int]
-        :return:
-            - None
-        """
-        if self.active:
-            self.data['generation'].update(text=neat_info['generation'])
-            self.data['species'].update(text=neat_info['current_species'])
-            self.data['genome'].update(text=neat_info['current_genome'])
-            self.data['fitness'].update(text=neat_info['fitness'])
-
-    def draw(self, surface: Any) -> None:
-        """
-        Draws the background and neat information to the given surface.
-        :param surface: Any
-        :return:
-            - None
-        """
-        if self.visible:
-            surface.fill(self.colour['background'])
-            for text_key in self.header:
-                self.header[text_key].draw(surface)
-
-            for text_key in self.data:
-                self.data[text_key].draw(surface)
 
 
 class Menu:
@@ -561,7 +445,7 @@ def main() -> None:
 
             display.blit(game_display, (0, 0))
             display.blit(network_display, (GAME_PANEL[0], 0))
-            display.blit(info_display, (GAME_PANEL[0], NETWORK_HEIGHT))
+            display.blit(info_display, (GAME_PANEL[0], NETWORK_BOX[1]))
 
             pg.display.update()
             clock.tick(max_fps)

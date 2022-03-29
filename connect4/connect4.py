@@ -1,74 +1,11 @@
 from __future__ import annotations
 
+from .visualize import GameBoard, Piece
+
 import mattslib.pygame as mlpg
 
 __version__ = '1.4.1'
 __date__ = '29/03/2022'
-
-
-class Piece:
-    """
-    Piece is a players coloured move on the game board.
-    """
-
-    BOARDER = 38
-    TOP_PADDING = 80
-    SPACING = 10
-
-    def __init__(self, coordinates: tuple, rows: int, cols: int, colour: list, game_height: int | float):
-        """
-        Initiates the object with required values.
-        :param coordinates: tuple[int, int]
-        :param rows: int
-        :param cols: int
-        :param colour: list[int]
-        :param height: int | float
-        """
-        self.coordinates = coordinates
-        self.radius = 30
-
-        self.active = True
-        self.show = True
-        self.colour = colour
-
-        self.radius = (((game_height - self.BOARDER * 2) / max(rows, cols)) - self.SPACING) / 2
-        self.pos = (self.BOARDER + (self.coordinates[1] * (self.radius * 2 + self.SPACING)),
-                    self.BOARDER + self.TOP_PADDING + (self.coordinates[0] * (self.radius * 2 + self.SPACING)))
-
-        self.circle = mlpg.shape.Circle(self.pos, self.colour, self.radius, 'tl')
-        self.circle_boarder = mlpg.shape.Circle(self.pos, mlpg.changeColour(colour, -70), self.radius, 'tl')
-
-        self.update()
-
-    def update(self, **kwargs: Any) -> None:
-        """
-        Updates relevant attributes.
-        :param kwargs: Any
-        :return:
-            - None
-        """
-        if 'colour' in kwargs:
-            self.colour = kwargs['colour']
-            self.circle.update(colour=self.colour)
-            self.circle_boarder.update(colour=mlpg.changeColour(self.colour, -70))
-        if 'highlight_colour' in kwargs:
-            self.circle_boarder.update(colour=mlpg.changeColour(kwargs['highlight_colour'], -70))
-        if 'active' in kwargs:
-            self.active = kwargs['active']
-        if 'show' in kwargs:
-            self.show = kwargs['show']
-
-    def draw(self, surface: Any, width: int = 5) -> None:
-        """
-        Draws the piece to the given game board.
-        :param surface: Any
-        :param width: int
-        :return:
-            - None
-        """
-        if self.show:
-            self.circle.draw(surface)
-            self.circle_boarder.draw(surface, width)
 
 
 class Connect4:
@@ -78,66 +15,33 @@ class Connect4:
     """
 
     ROWS, COLUMNS = 6, 7
-    PLAYERS = {0: {'id': 1, 'name': 'Red', 'colour': mlpg.RED}, 1: {'id': 2, 'name': 'Yellow', 'colour': mlpg.YELLOW}}
-    EMPTY = mlpg.WHITE
-    INVALID_MOVE = -2
     LENGTH = 4
-    GAME_STATES = {-2: 'Invalid move', -1: '', 0: 'Draw', 1: 'Win'}
-    BOARDER = 10
+    PLAYERS = {0: {'id': 1, 'name': 'Red'}, 1: {'id': 2, 'name': 'Yellow'}}
+    INVALID_MOVE, EMPTY, DRAW, WIN = -2, -1, 0, 1
 
     def __init__(self, game_dims):
-        self.game_width = game_dims[0]
-        self.game_height = game_dims[1]
-
-        self.board = []
-        self.active = True
-        self.visible = True
-        self.colour = {'background': mlpg.BLUE}
-
         self.current_player = 0
         self.opponent = abs(self.current_player - 1)
         self.match = True
         self.turn = 0
         self.result = -1
 
-        self.board_background = mlpg.Rect((self.game_width / 2, self.game_height / 2), self.colour['background'],
-                                          [self.game_width - (self.BOARDER * 2), self.game_height - (self.BOARDER * 2)])
-        self.player_text = mlpg.Message(f"{self.PLAYERS[self.current_player]['name']}'s turn!",
-                                        (self.game_width / 2, 60), size=40)
-
-        self.board = [[Piece((h, j), self.ROWS, self.COLUMNS, self.EMPTY, self.game_height)
-                       for j in range(self.COLUMNS)] for h in range(self.ROWS)]
+        self.board = [[-1 for _ in range(self.COLUMNS)] for _ in range(self.ROWS)]
+        self.game_board = GameBoard(game_dims, self.ROWS, self.COLUMNS)
 
     def reset(self) -> None:
         """
-        Resets specific connect4 attributes for next match.
+        Resets key connect4 attributes for next match.
         :return:
             - None
         """
-        for h in range(self.ROWS):
-            for j in range(self.COLUMNS):
-                self.board[h][j].update(colour=self.EMPTY)
+        self.switchPlayer()
         self.match = True
         self.turn = 0
-        self.current_player = self.opponent
-        self.opponent = abs(self.current_player - 1)
         self.result = -1
 
-    def draw(self, surface: Any) -> None:
-        """
-        Draws the game board and pieces to the surface.
-        :param surface: Any
-        :return:
-            - None
-        """
-        self.player_text.update(text=f"{self.PLAYERS[self.current_player]['name']}'s turn!")
-
-        surface.fill(mlpg.changeColour(self.colour['background'], -70))
-        self.board_background.draw(surface)
-        self.player_text.draw(surface)
-        for row in self.board:
-            for piece in row:
-                piece.draw(surface)
+        self.board = [[-1 for _ in range(self.COLUMNS)] for _ in range(self.ROWS)]
+        self.game_board.update(reset=True)
 
     def makeMove(self, move: tuple) -> None:
         """
@@ -146,7 +50,8 @@ class Connect4:
         :return:
             - None
         """
-        self.board[move[0]][move[1]].update(colour=self.PLAYERS[self.current_player]['colour'])
+        self.board[move[0]][move[1]] = self.current_player
+        self.game_board.update(move=move, player=self.current_player)
         self.turn += 1
 
     def getPossibleMove(self, possible_move: int) -> tuple:
@@ -158,12 +63,12 @@ class Connect4:
         """
         move = self.INVALID_MOVE
         for row in range(self.ROWS):
-            if self.board[row][possible_move].colour != self.EMPTY:
+            if self.board[row][possible_move] != self.EMPTY:
                 break
             move = row
         return move, possible_move
 
-    def showWin(self, move: tuple, direction_pair: list, colour: list) -> None:
+    def showWin(self, move: tuple, direction_pair: list, colour: list = mlpg.GREEN) -> None:
         """
         Shows the connections made with move that result in a win.
         :param move: tuple[int, int]
@@ -172,13 +77,13 @@ class Connect4:
         :return:
             - None
         """
-        self.board[move[0]][move[1]].update(highlight_colour=colour)
+        self.game_board.update(move=move, highlight_colour=colour)
         for direction in direction_pair:
             for n in range(1, self.LENGTH):
                 a, b = move[0] + (n * direction[0]), move[1] + (n * direction[1])
                 if 0 <= a < self.ROWS and 0 <= b < self.COLUMNS:
-                    if self.board[a][b].colour == self.PLAYERS[self.current_player]['colour']:
-                        self.board[a][b].update(highlight_colour=colour)
+                    if self.board[a][b] == self.current_player:
+                        self.game_board.update(move=(a, b), highlight_colour=colour)
                     else:
                         break
                 else:
@@ -216,16 +121,15 @@ class Connect4:
                     for n in range(1, self.LENGTH):
                         a, b = move[0] + (n * direction[0]), move[1] + (n * direction[1])
                         if 0 <= a < self.ROWS and 0 <= b < self.COLUMNS:
-                            piece = self.board[a][b]
-                            if piece.colour == self.PLAYERS[self.current_player]['colour']:
+                            if self.board[a][b] == self.current_player:
                                 directions[direction_pair][direction].append(self.PLAYERS[self.current_player]['id'])
                                 if count_connections:
                                     connection_count += 1
                             else:
                                 count_connections = False
-                                if piece.colour == self.PLAYERS[self.opponent]['colour']:
+                                if self.board[a][b] == self.opponent:
                                     directions[direction_pair][direction].append(self.PLAYERS[self.opponent]['id'])
-                                elif piece.colour == self.EMPTY:
+                                elif self.board[a][b] == self.EMPTY:
                                     directions[direction_pair][direction].append(0)
                         else:
                             directions[direction_pair][direction].append(-1)  # out of bounds
@@ -245,27 +149,27 @@ class Connect4:
         directions, counts = self.getPieceSlices(move)
         for direction_pair in counts:
             if sum(counts[direction_pair]) >= self.LENGTH - 1:
-                self.showWin(move, directions[direction_pair], mlpg.GREEN)
+                self.showWin(move, directions[direction_pair])
                 win = True
         if win:
             self.match = False
-            self.result = 1
+            self.result = self.WIN
             return
 
-        for row in self.board:
-            for piece in row:
-                if piece.colour == self.EMPTY:
+        for h in range(self.ROWS):
+            for j in range(self.COLUMNS):
+                if self.board[h][j] == self.EMPTY:
                     draw = False
 
         if draw:
             self.match = False
-            self.result = 0
+            self.result = self.DRAW
         else:
             self.result = -1
 
     def fitnessEvaluation(self) -> tuple:
         """
-        Calculates the fitness score with match results.
+        Calculates the fitness score using match results.
         :return:
             - fitness - tuple[int, int]
         """
@@ -273,6 +177,16 @@ class Connect4:
         if self.result == 1:
             return max_fitness - self.turn, -max_fitness + self.turn
         return 0, 0
+
+    def draw(self, surface: Any) -> None:
+        """
+        Draws the game board and pieces to the surface.
+        :param surface: Any
+        :return:
+            - None
+        """
+        self.game_board.update(text=f"{self.PLAYERS[self.current_player]['name']}'s turn!")
+        self.game_board.draw(surface)
 
     def main(self, possible_move: int) -> None:
         """
