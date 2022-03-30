@@ -19,6 +19,7 @@ class Settings(object):
         :param load: bool
         """
         self.save_intervals = []
+        self.save_model_interval = 1000
         self.delta_genome_threshold = 0.75
         self.distance_weights = {
             'activation': 0.1,

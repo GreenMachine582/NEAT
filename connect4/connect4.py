@@ -122,17 +122,17 @@ class Connect4:
                         a, b = move[0] + (n * direction[0]), move[1] + (n * direction[1])
                         if 0 <= a < self.ROWS and 0 <= b < self.COLUMNS:
                             if self.board[a][b] == self.current_player:
-                                directions[direction_pair][direction].append(self.PLAYERS[self.current_player]['id'])
+                                directions[direction_pair][direction].append(self.current_player)
                                 if count_connections:
                                     connection_count += 1
                             else:
                                 count_connections = False
                                 if self.board[a][b] == self.opponent:
-                                    directions[direction_pair][direction].append(self.PLAYERS[self.opponent]['id'])
+                                    directions[direction_pair][direction].append(self.opponent)
                                 elif self.board[a][b] == self.EMPTY:
-                                    directions[direction_pair][direction].append(0)
+                                    directions[direction_pair][direction].append(self.EMPTY)
                         else:
-                            directions[direction_pair][direction].append(-1)  # out of bounds
+                            directions[direction_pair][direction].append(self.INVALID_MOVE)  # out of bounds
 
                 counts[direction_pair].append(connection_count)
         return directions, counts

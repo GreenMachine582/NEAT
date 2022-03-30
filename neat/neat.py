@@ -129,11 +129,12 @@ class NEAT(object):
             if self.current_species < len(self.species) - 1:
                 self.current_species += 1
             else:
-                self.save(filename)
-                if self.generation + 1 in self.settings.save_intervals:
-                    self.save(f"{filename}_gen_{self.generation + 1}")
                 self.evolve()
                 self.current_species = 0
+                self.save(f"{filename}.neat")
+                if self.generation in self.settings.save_intervals or\
+                        self.generation % self.settings.save_model_interval == 0:
+                    self.save(f"{filename}_gen_{self.generation}.neat")
 
     def shouldEvolve(self) -> bool:
         """

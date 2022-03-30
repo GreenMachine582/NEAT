@@ -27,9 +27,9 @@ FPS = 40
 display = False
 
 ENVIRONMENT = 'connect4'
-PLAYER_TYPES = ['Human', 'NEAT', '1', '1000', '6000']
+PLAYER_TYPES = ['Human', 'NEAT', '1000', '6000', '10000']
 SHOW_EVERY = ['Genome', 'Generation', 'None']
-SPEEDS = [1, 5, 25, 100, 500]
+SPEEDS = [1, 2, 5, 100, 500]
 
 ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
 ENVIRONMENT_DIR = f"{ROOT_DIR}\\{ENVIRONMENT}"
@@ -96,16 +96,17 @@ def setupAi(player_id: int, inputs: int = 4, outputs: int = 1, population: int =
     :return:
         - neat - NEAT
     """
-    if players[player_id] == PLAYER_TYPES[1]:
-        file = f"{MODELS_DIR}ai_{player_id}.neat"
-        if os.path.isfile(file):
-            neat = NEAT.load(file)
-            return neat
-    else:
+    global players
+    if players[player_id] != PLAYER_TYPES[1]:
         file = MODELS_DIR + f"ai_{player_id}_gen_{players[player_id]}.neat"
         if os.path.isfile(file):
             neat = NEAT.load(file)
             return neat
+        players[player_id] = PLAYER_TYPES[1]
+    file = f"{MODELS_DIR}ai_{player_id}.neat"
+    if os.path.isfile(file):
+        neat = NEAT.load(file)
+        return neat
     neat = NEAT(ENVIRONMENT_DIR)
     neat.generate(inputs, outputs, population=population)
     return neat
@@ -129,7 +130,10 @@ def neatMove(genome: Genome) -> int:
             for direction in directions[direction_pair]:
                 if directions[direction_pair][direction] is not None:
                     inputs = directions[direction_pair][direction]
-                    possible_moves[possible_move] += sum(genome.forward(inputs))
+                    input_range = {'max': len(list(connect4.PLAYERS.keys())), 'min': connect4.INVALID_MOVE}
+                    normalized_inputs = [(i - input_range['min']) / (input_range['max'] - input_range['min'])
+                                         for i in inputs]
+                    possible_moves[possible_move] += sum(genome.forward(normalized_inputs))
     sorted_moves = ml.dict.combineByValues(possible_moves)
     max_min_keys = ml.list.findMaxMin(list(sorted_moves.keys()))
     move = random.choice(sorted_moves[max_min_keys['max']['value']])
@@ -160,9 +164,6 @@ def close() -> None:
     :return:
         - None
     """
-    for player_id in players:
-        if players[player_id] == PLAYER_TYPES[1]:
-            neats[player_id].save(f"{MODELS_DIR}ai_{player_id}.neat")
     pg.quit()
     quit()
 
@@ -437,10 +438,14 @@ def main() -> None:
                     if players[player_key] == PLAYER_TYPES[1] and neats[player_key].shouldEvolve():
                         current_genome = neats[player_key].getGenome()
                         current_genome.fitness = fitness[i]
-                        neats[player_key].nextGenome(f"{MODELS_DIR}ai_{player_key}.neat")
+                        neats[player_key].nextGenome(f"{MODELS_DIR}ai_{player_key}")
                         generation_update += f"{neats[player_key].generation}-{player_key}-{neats[player_key].getPopulation()}, "
                 if not display and show:
                     print(generation_update)
+                if neats[1].generation != neats[2].generation or neats[1].getPopulation() != neats[2].getPopulation():
+                    print('error: here')
+                    print(neats[1].generation, neats[1].getPopulation(), neats[2].generation, neats[2].getPopulation())
+                    input()
                 connect4.reset()
 
         if display:
