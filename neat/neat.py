@@ -9,8 +9,8 @@ from .specie import Specie, genomicDistance
 from mattslib.dict import countOccurrence, getKeyByWeights
 from mattslib.file import read, write
 
-__version__ = '1.4.5'
-__date__ = '29/03/2022'
+__version__ = '1.4.6'
+__date__ = '1/04/2022'
 
 
 def genomicCrossover(x_member: Genome, y_member: Genome) -> Genome:
@@ -91,7 +91,6 @@ class NEAT(object):
         self.current_genome = 0
 
         self.best_genome = None
-        self.fitness_sum = 0
 
     def generate(self, inputs: int, outputs: int, population: int = 100) -> None:
         """
@@ -159,13 +158,13 @@ class NEAT(object):
         """
 
         # Calculates the generation fitness
-        self.fitness_sum = 0
+        fitness_sum = 0
         for specie in self.species:
             specie.updateFitness()
-            self.fitness_sum += specie.fitness_mean
+            fitness_sum += specie.fitness_mean
 
         # Mutates all genomes since fitness didn't reach minimum requirements
-        if self.fitness_sum <= 0:
+        if fitness_sum <= 0:
             for specie in self.species:
                 for member in specie.members:
                     member.mutate(self.settings.mutation_probabilities)
@@ -186,8 +185,6 @@ class NEAT(object):
         for specie in self.species:
             if specie.shouldSurvive():
                 surviving_species.append(specie)
-            else:
-                self.fitness_sum -= specie.fitness_mean
         self.species = surviving_species
 
         # Kills a portion of the remaining members in each specie
@@ -205,24 +202,30 @@ class NEAT(object):
         :return:
             - None
         """
+        fitness_sum = 0
+        for specie in self.species:
+            specie.updateFitness()
+            specie.updateFitnessHistory()
+            fitness_sum += specie.fitness_mean
         if self.species:
             # Breeds the surviving populace
             temp_species = deepcopy(self.species)
             for specie_key, specie in enumerate(temp_species):
-                if self.fitness_sum != 0:
+                if fitness_sum != 0:
                     population_diff = self.population - self.getPopulation()
-                    offspring = round((specie.fitness_mean / self.fitness_sum) * population_diff)
-                    self.fitness_sum -= specie.fitness_mean
+                    offspring = round((specie.fitness_mean / fitness_sum) * population_diff)
+                    fitness_sum -= specie.fitness_mean
                     for _ in range(offspring):
                         child = self.breed(self.settings.breed_probabilities, specie_key)
                         self.classifyGenome(child)
-        else:
-            # Introduces new species and genomes
-            for p in range(self.population):
-                genome = deepcopy(self.best_genome) if p % 3 == 0 else Genome(self.inputs, self.outputs,
-                                                                              self.settings.node_info)
-                genome.mutate(self.settings.mutation_probabilities)
-                self.classifyGenome(genome)
+            if self.getPopulation() == self.population:
+                return
+        # Introduces new species and genomes
+        for p in range(self.population - self.getPopulation()):
+            genome = deepcopy(self.best_genome) if p % 3 == 0 else Genome(self.inputs, self.outputs,
+                                                                          self.settings.node_info)
+            genome.mutate(self.settings.mutation_probabilities)
+            self.classifyGenome(genome)
 
     def breed(self, probabilities: dict, specie_key: int) -> Genome:
         """
@@ -312,6 +315,17 @@ class NEAT(object):
         neat_info = {'generation': self.generation+1, 'current_species': self.current_species+1,
                      'current_genome': self.current_genome+1, 'fitness': self.getGenome().fitness}
         return neat_info
+
+    def update(self, **kwargs: dict) -> None:
+        """
+        Updates the best genome by searching for the highest fitness from
+        each specie.
+        :param kwargs: dict[str: Any]
+        :return:
+            - None
+        """
+        if 'settings' in kwargs:
+            self.settings = Settings(kwargs['settings'])
 
     def save(self, file_dir: str) -> None:
         """

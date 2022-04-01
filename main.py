@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import os
-import pygame as pg
+import sys
+import time
 import random
+
+import pygame as pg
 
 from connect4 import Connect4
 from connect4 import visualize
@@ -11,8 +14,8 @@ from neat import NEAT
 import mattslib as ml
 import mattslib.pygame as mlpg
 
-__version__ = '1.5.1'
-__date__ = '29/03/2022'
+__version__ = '1.5.2'
+__date__ = '1/04/2022'
 
 # Constants
 WIDTH, HEIGHT = 1120, 640
@@ -27,7 +30,7 @@ FPS = 40
 display = False
 
 ENVIRONMENT = 'connect4'
-PLAYER_TYPES = ['Human', 'NEAT', '1000', '6000', '10000']
+PLAYER_TYPES = ['Human', 'NEAT', '1900', '2800', '4500']
 SHOW_EVERY = ['Genome', 'Generation', 'None']
 SPEEDS = [1, 2, 5, 100, 500]
 
@@ -112,10 +115,11 @@ def setupAi(player_id: int, inputs: int = 4, outputs: int = 1, population: int =
     return neat
 
 
-def neatMove(genome: Genome) -> int:
+def neatMove(genome: Genome, ai_type: str = 'Hard') -> int:
     """
     Calculates the best move for the current genome to make.
     :param genome: Genome
+    :param ai_type: str
     :return:
         - move - int
     """
@@ -124,13 +128,35 @@ def neatMove(genome: Genome) -> int:
         possible_move = connect4.getPossibleMove(i)
         if possible_move[0] != connect4.INVALID_MOVE:
             possible_moves[possible_move] = 0
+    input_range = {'max': len(list(connect4.PLAYERS.keys())), 'min': connect4.INVALID_MOVE}
     for possible_move in possible_moves:
+        # _, counts = connect4.getPieceSlices(possible_move)
+        # input_range = {'max': max(connect4.ROWS, connect4.COLUMNS), 'min': 0}
+        # if ai_type == 'Easy':
+        #     for direction_pair in counts:
+        #         inputs = counts[direction_pair]
+        #         normalized_inputs = [(i - input_range['min']) / (input_range['max'] - input_range['min'])
+        #                              for i in inputs]
+        #         possible_moves[possible_move] += sum(genome.forward(normalized_inputs))
+        # elif ai_type == 'Medium':
+        #     inputs = [sum(counts[direction_pair]) for direction_pair in counts]
+        #     normalized_inputs = [(i - input_range['min']) / (input_range['max'] - input_range['min'])
+        #                          for i in inputs]
+        #     possible_moves[possible_move] += sum(genome.forward(normalized_inputs))
+        # elif ai_type == 'Hard':
+        #     inputs = []
+        #     for direction_pair in counts:
+        #         for connection_count in counts[direction_pair]:
+        #             inputs.append(connection_count)
+        #     normalized_inputs = [(i - input_range['min']) / (input_range['max'] - input_range['min'])
+        #                          for i in inputs]
+        #     possible_moves[possible_move] += sum(genome.forward(normalized_inputs))
+
         directions, _ = connect4.getPieceSlices(possible_move)
         for direction_pair in directions:
             for direction in directions[direction_pair]:
                 if directions[direction_pair][direction] is not None:
                     inputs = directions[direction_pair][direction]
-                    input_range = {'max': len(list(connect4.PLAYERS.keys())), 'min': connect4.INVALID_MOVE}
                     normalized_inputs = [(i - input_range['min']) / (input_range['max'] - input_range['min'])
                                          for i in inputs]
                     possible_moves[possible_move] += sum(genome.forward(normalized_inputs))
@@ -164,8 +190,10 @@ def close() -> None:
     :return:
         - None
     """
+    print(f"Thanks for using C4 with NEAT")
+    time.sleep(3)
     pg.quit()
-    quit()
+    sys.exit()
 
 
 class Menu:
@@ -442,10 +470,6 @@ def main() -> None:
                         generation_update += f"{neats[player_key].generation}-{player_key}-{neats[player_key].getPopulation()}, "
                 if not display and show:
                     print(generation_update)
-                if neats[1].generation != neats[2].generation or neats[1].getPopulation() != neats[2].getPopulation():
-                    print('error: here')
-                    print(neats[1].generation, neats[1].getPopulation(), neats[2].generation, neats[2].getPopulation())
-                    input()
                 connect4.reset()
 
         if display:

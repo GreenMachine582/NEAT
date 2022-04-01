@@ -10,7 +10,7 @@ from mattslib.dict import countOccurrence, sortIntoDict
 from mattslib.math_util import mean
 
 __version__ = '1.4.4'
-__date__ = '28/03/2022'
+__date__ = '1/04/2022'
 
 
 def genomicDistance(x_member: Genome, y_member: Genome, distance_weights: dict) -> float:
@@ -79,8 +79,14 @@ class Specie(object):
             member.adjusted_fitness = member.fitness / len(self.members)
 
         self.fitness_mean = int(round(mean(self.getAllFitnesses())))
-        self.fitness_history.append(self.fitness_mean)
 
+    def updateFitnessHistory(self) -> None:
+        """
+        Updates the fitness history with the sum of species mean fitness.
+        :return:
+            - None
+        """
+        self.fitness_history.append(self.fitness_mean)
         if len(self.fitness_history) > self.settings.max_fitness_history:
             self.fitness_history.pop(0)
 

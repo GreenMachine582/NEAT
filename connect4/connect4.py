@@ -4,8 +4,8 @@ from .visualize import GameBoard, Piece
 
 import mattslib.pygame as mlpg
 
-__version__ = '1.4.1'
-__date__ = '29/03/2022'
+__version__ = '1.4.2'
+__date__ = '1/04/2022'
 
 
 class Connect4:
@@ -19,15 +19,21 @@ class Connect4:
     PLAYERS = {0: {'id': 1, 'name': 'Red'}, 1: {'id': 2, 'name': 'Yellow'}}
     INVALID_MOVE, EMPTY, DRAW, WIN = -2, -1, 0, 1
 
-    def __init__(self, game_dims):
+    def __init__(self, game_dims: tuple = None):
         self.current_player = 0
         self.opponent = abs(self.current_player - 1)
         self.match = True
         self.turn = 0
-        self.result = -1
+        self.result = self.EMPTY
 
-        self.board = [[-1 for _ in range(self.COLUMNS)] for _ in range(self.ROWS)]
-        self.game_board = GameBoard(game_dims, self.ROWS, self.COLUMNS)
+        self.active = True
+        self.visible = False
+
+        self.board = [[self.EMPTY for _ in range(self.COLUMNS)] for _ in range(self.ROWS)]
+        self.game_board = None
+        if game_dims is not None:
+            self.visible = True
+            self.game_board = GameBoard(game_dims, self.ROWS, self.COLUMNS)
 
     def reset(self) -> None:
         """
@@ -38,10 +44,12 @@ class Connect4:
         self.switchPlayer()
         self.match = True
         self.turn = 0
-        self.result = -1
+        self.result = self.EMPTY
 
-        self.board = [[-1 for _ in range(self.COLUMNS)] for _ in range(self.ROWS)]
-        self.game_board.update(reset=True)
+        self.board = [[self.EMPTY for _ in range(self.COLUMNS)] for _ in range(self.ROWS)]
+
+        if self.visible:
+            self.game_board.update(reset=True)
 
     def makeMove(self, move: tuple) -> None:
         """
@@ -51,7 +59,8 @@ class Connect4:
             - None
         """
         self.board[move[0]][move[1]] = self.current_player
-        self.game_board.update(move=move, player=self.current_player)
+        if self.visible:
+            self.game_board.update(move=move, player=self.current_player)
         self.turn += 1
 
     def getPossibleMove(self, possible_move: int) -> tuple:
@@ -95,6 +104,7 @@ class Connect4:
         :return:
             - None
         """
+        # loser goes first
         self.current_player = self.opponent
         self.opponent = abs(self.current_player - 1)
 
@@ -105,8 +115,7 @@ class Connect4:
         :return:
             - directions, counts - tuple[dict[str: dict[tuple[int, int]: list[int]]], dict[tuple[int, int]: int]]
         """
-        # don't need to check up
-        directions = {'vertical': {(1, 0): [], (-1, 0): None},
+        directions = {'vertical': {(1, 0): [], (-1, 0): []},
                       'horizontal': {(0, 1): [], (0, -1): []},
                       'diagonal1': {(-1, 1): [], (1, -1): []},
                       'diagonal2': {(1, 1): [], (-1, -1): []}}
@@ -127,10 +136,7 @@ class Connect4:
                                     connection_count += 1
                             else:
                                 count_connections = False
-                                if self.board[a][b] == self.opponent:
-                                    directions[direction_pair][direction].append(self.opponent)
-                                elif self.board[a][b] == self.EMPTY:
-                                    directions[direction_pair][direction].append(self.EMPTY)
+                                directions[direction_pair][direction].append(self.board[a][b])
                         else:
                             directions[direction_pair][direction].append(self.INVALID_MOVE)  # out of bounds
 
@@ -144,12 +150,13 @@ class Connect4:
         :return:
             - None
         """
-        draw, win = True, False
-        
+        win = False
+
         directions, counts = self.getPieceSlices(move)
         for direction_pair in counts:
             if sum(counts[direction_pair]) >= self.LENGTH - 1:
-                self.showWin(move, directions[direction_pair])
+                if self.visible:
+                    self.showWin(move, directions[direction_pair])
                 win = True
         if win:
             self.match = False
@@ -159,13 +166,11 @@ class Connect4:
         for h in range(self.ROWS):
             for j in range(self.COLUMNS):
                 if self.board[h][j] == self.EMPTY:
-                    draw = False
+                    self.result = self.EMPTY
+                    return
 
-        if draw:
-            self.match = False
-            self.result = self.DRAW
-        else:
-            self.result = -1
+        self.match = False
+        self.result = self.DRAW
 
     def fitnessEvaluation(self) -> tuple:
         """
@@ -185,8 +190,9 @@ class Connect4:
         :return:
             - None
         """
-        self.game_board.update(text=f"{self.PLAYERS[self.current_player]['name']}'s turn!")
-        self.game_board.draw(surface)
+        if self.visible:
+            self.game_board.update(text=f"{self.PLAYERS[self.current_player]['name']}'s turn!")
+            self.game_board.draw(surface)
 
     def main(self, possible_move: int) -> None:
         """
@@ -196,9 +202,10 @@ class Connect4:
         :return:
             - None
         """
-        move = self.getPossibleMove(possible_move)
-        if move[0] != self.INVALID_MOVE:
-            self.makeMove(move)
-            self.winChecker(move)
-            if self.match:
-                self.switchPlayer()
+        if self.active:
+            move = self.getPossibleMove(possible_move)
+            if move[0] != self.INVALID_MOVE:
+                self.makeMove(move)
+                self.winChecker(move)
+                if self.match:
+                    self.switchPlayer()
