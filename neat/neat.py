@@ -112,13 +112,13 @@ class NEAT(object):
 
         self.best_genome = self.species[0].members[0]
 
-    def nextGenome(self, filename: str) -> None:
+    def nextGenome(self, filename: str) -> bool:
         """
         Gets the next genome in population, updates counters and
         saves models at certain intervals.
         :param filename: str
         :return:
-            - None
+            - new_generation - bool
         """
         specie = self.species[self.current_species]
         if self.current_genome < len(specie.members) - 1:
@@ -131,9 +131,13 @@ class NEAT(object):
                 self.evolve()
                 self.current_species = 0
                 self.save(f"{filename}")
-                if self.generation in self.settings.save_intervals or\
+                if self.generation in self.settings.save_intervals:
+                    self.save(f"{filename}_gen_{self.generation}")
+                elif self.settings.save_model_interval != 0 and\
                         self.generation % self.settings.save_model_interval == 0:
                     self.save(f"{filename}_gen_{self.generation}")
+                return True
+        return False
 
     def shouldEvolve(self) -> bool:
         """
@@ -281,9 +285,9 @@ class NEAT(object):
         """
         leading_genomes = [specie.members[specie.representative] for specie in self.species]
         best_genome = leading_genomes[0]
-        for leading_genome in leading_genomes:
-            if leading_genome.fitness > best_genome.fitness:
-                best_genome = leading_genome
+        for genome in range(1, len(leading_genomes)):
+            if leading_genomes[genome].fitness > best_genome.fitness:
+                best_genome = leading_genomes[genome]
         self.best_genome = deepcopy(best_genome)
 
     def getGenome(self, specie: int = None, genome: int = None) -> Genome:

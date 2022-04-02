@@ -14,7 +14,7 @@ from neat import NEAT
 import mattslib as ml
 import mattslib.pygame as mlpg
 
-__version__ = '1.5.3'
+__version__ = '1.5.4'
 __date__ = '2/04/2022'
 
 # Constants
@@ -30,7 +30,7 @@ FPS = 40
 display = False
 
 ENVIRONMENT = 'connect4'
-PLAYER_TYPES = ['Human', 'AI', 'Train']
+PLAYER_TYPES = ['Human', 'Best', 'Train']
 DIFFICULTY = ['Medium', 'Hard']
 NEAT_INPUTS = {DIFFICULTY[0]: 2, DIFFICULTY[1]: 8}
 SHOW_EVERY = ['Genome', 'Generation', 'None']
@@ -92,30 +92,50 @@ def getSpeedShow(current_player: dict) -> tuple:
     return game_speed, True
 
 
-def setupAi(player_key: int, outputs: int = 1, population: int = 100) -> NEAT:
+def setup(users: list) -> list:
+    """
+    Sets the global variables and neats for players.
+    :param users: list[dict[str: Any]]
+    :return:
+        - users - list[dict[str: Any]]
+    """
+    global connect4, network, info, menu, options
+    connect4 = Connect4(GAME_PANEL)
+    network = visualize.Network(NETWORK_BOX)
+    info = visualize.Info(INFO_BOX)
+    options = Options()
+    menu = Menu()
+    for player_key in range(len(users)):
+        current_player = users[player_key]
+        users[player_key]['neat'] = None
+        if current_player != PLAYER_TYPES[0]:
+            users[player_key]['neat'] = setupAi(current_player)
+    return users
+
+
+def setupAi(current_player: dict, outputs: int = 1, population: int = 100) -> NEAT:
     """
     Sets up neat with game settings in mind.
     :rtype: object
-    :param player_key: int
+    :param current_player: dict[str: Any]
     :param outputs: int
     :param population: int
     :return:
         - neat - NEAT
     """
-    global players
-    if players[player_key]['type'] == PLAYER_TYPES[1]:
-        file = MODELS_DIR + MODEL_NAME % (players[player_key]['type'], players[player_key]['difficulty'])
+    if current_player['type'] == PLAYER_TYPES[1]:
+        file = MODELS_DIR + MODEL_NAME % (current_player['type'], current_player['difficulty'])
         if os.path.isfile(file + '.neat'):
             neat = NEAT.load(file)
             return neat
         else:
-            players[player_key]['type'] = PLAYER_TYPES[2]
-    file = MODELS_DIR + MODEL_NAME % (players[player_key]['type'], players[player_key]['difficulty'])
+            current_player['type'] = PLAYER_TYPES[2]
+    file = MODELS_DIR + MODEL_NAME % (current_player['type'], current_player['difficulty'])
     if os.path.isfile(file + '.neat'):
         neat = NEAT.load(file)
     else:
         neat = NEAT(ENVIRONMENT_DIR)
-        inputs = NEAT_INPUTS[players[player_key]['difficulty']]
+        inputs = NEAT_INPUTS[current_player['difficulty']]
         neat.generate(inputs, outputs, population=population)
     return neat
 
@@ -158,37 +178,45 @@ def neatMove(player: dict, genome: Genome) -> int:
                     normalized_input = (connection - input_range['min']) / (input_range['max'] - input_range['min'])
                     inputs.append(normalized_input)
             possible_moves[possible_move] += sum(genome.forward(inputs))
-
-        # directions, _ = connect4.getPieceSlices(possible_move)
-        # for direction_pair in directions:
-        #     for direction in directions[direction_pair]:
-        #         if directions[direction_pair][direction] is not None:
-        #             inputs = directions[direction_pair][direction]
-        #             normalized_inputs = [(i - input_range['min']) / (input_range['max'] - input_range['min'])
-        #                                  for i in inputs]
-        #             possible_moves[possible_move] += sum(genome.forward(normalized_inputs))
     sorted_moves = ml.dict.combineByValues(possible_moves)
     max_min_keys = ml.list.findMaxMin(list(sorted_moves.keys()))
     move = random.choice(sorted_moves[max_min_keys['max']['value']])
     return move[1]
 
 
-def setup() -> None:
+def checkBest(player_key: int, match_range: int = 50, win_threshold: float = 0.75) -> None:
     """
-    Sets up the global variables and neat players.
+    Update the best neat for each difficulty depending on win rate with current
+    trained neat.
+    :param player_key: int
+    :param match_range: int
+    :param win_threshold: float
     :return:
         - None
     """
-    global connect4, network, info, menu, options, players
-    connect4 = Connect4(GAME_PANEL)
-    network = visualize.Network(NETWORK_BOX)
-    info = visualize.Info(INFO_BOX)
-    options = Options()
-    menu = Menu()
-    for player_id in range(len(players)):
-        players[player_id]['neat'] = None
-        if players[player_id]['type'] != PLAYER_TYPES[0]:
-            players[player_id]['neat'] = setupAi(player_id)
+    temp_players = players[:]
+    temp_players[abs(player_key - 1)] = {'type': PLAYER_TYPES[1], 'difficulty': temp_players[player_key]['difficulty'],
+                                         'neat': None}
+    setup(temp_players)
+    win_count = 0
+    for _ in range(match_range):
+        run = True
+        while run:
+            current_player = players[connect4.current_player]
+            if connect4.match:
+                current_genome = current_player['neat'].best_genome
+                possible_move = neatMove(current_player, current_genome)
+                connect4.main(possible_move)
+
+            if not connect4.match:
+                if connect4.result == connect4.WIN and connect4.current_player == player_key:
+                    win_count += 1
+                connect4.reset()
+                run = False
+    if (win_count / match_range) > win_threshold:
+        print(f"New Best {players[player_key]['difficulty']} NEAT (win rate): {win_count/match_range}")
+        file = MODELS_DIR + MODEL_NAME % (PLAYER_TYPES[1], players[player_key]['difficulty'])
+        players[player_key]['neat'].save(file)
 
 
 def close() -> None:
@@ -324,21 +352,29 @@ class Options:
             self.group_buttons['Evolution Speed:'].update(active=True)
             self.group_buttons['Show Every:'].update(active=True)
 
-        if players[0]['type'] == PLAYER_TYPES[0]:
-            game_speed = SPEEDS[0]
-            self.group_buttons['Difficulty 1:'].update(active=False)
+        if players[0]['difficulty'] == players[1]['difficulty']:
+            if players[0]['type'] == players[1]['type'] == PLAYER_TYPES[2]:
+                players[0]['difficulty'] = DIFFICULTY[0]
+                players[1]['difficulty'] = DIFFICULTY[1]
+
+        if players[0]['type'] == players[1]['type'] == PLAYER_TYPES[0]:
             self.group_buttons['Game Speed:'].update(active=False)
+            game_speed = SPEEDS[0]
+        elif players[0]['type'] == PLAYER_TYPES[0] or players[1]['type'] == PLAYER_TYPES[0]:
+            self.group_buttons['Game Speed:'].update(active=False)
+            game_speed = SPEEDS[0]
         else:
-            self.group_buttons['Difficulty 1:'].update(active=True)
             self.group_buttons['Game Speed:'].update(active=True)
 
+        if players[0]['type'] == PLAYER_TYPES[0]:
+            self.group_buttons['Difficulty 1:'].update(active=False)
+        else:
+            self.group_buttons['Difficulty 1:'].update(active=True)
+
         if players[1]['type'] == PLAYER_TYPES[0]:
-            game_speed = SPEEDS[0]
             self.group_buttons['Difficulty 2:'].update(active=False)
-            self.group_buttons['Game Speed:'].update(active=False)
         else:
             self.group_buttons['Difficulty 2:'].update(active=True)
-            self.group_buttons['Game Speed:'].update(active=True)
 
         if mouse_pos is not None:
             for group in self.group_buttons:
@@ -346,14 +382,14 @@ class Options:
                 if button_key is not None and self.group_buttons[group].active:
                     if 'Player' in group:
                         players[int(group[-2]) - 1]['type'] = PLAYER_TYPES[button_key]
-                        setup()
+                        setup(players)
                     elif 'Difficulty' in group:
                         players[int(group[-2]) - 1]['difficulty'] = DIFFICULTY[button_key]
                         if players[0]['difficulty'] == players[1]['difficulty']:
                             if players[0]['type'] == players[1]['type'] == PLAYER_TYPES[2]:
                                 players[0]['difficulty'] = DIFFICULTY[0]
                                 players[1]['difficulty'] = DIFFICULTY[1]
-                        setup()
+                        setup(players)
                     elif group == 'Game Speed:':
                         game_speed = SPEEDS[button_key]
                     elif group == 'Evolution Speed:':
@@ -422,7 +458,7 @@ def main() -> None:
     """
     global display, connect4, network, info, menu, options
 
-    setup()
+    setup(players)
 
     run, frame_count = True, 1
     while run:
@@ -496,7 +532,8 @@ def main() -> None:
                         current_genome.fitness = fitness[i]
                         file_name = MODELS_DIR + MODEL_NAME % (players[player_key]['type'],
                                                                players[player_key]['difficulty'])
-                        players[player_key]['neat'].nextGenome(file_name)
+                        if players[player_key]['neat'].nextGenome(file_name):
+                            checkBest(player_key)
                 if not display and show:
                     print(f"Generation: {current_player['neat'].generation}")
                 connect4.reset()

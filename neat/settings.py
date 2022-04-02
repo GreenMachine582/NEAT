@@ -3,7 +3,7 @@ from __future__ import annotations
 from mattslib.file import read, write
 
 __version__ = '1.4.5'
-__date__ = '29/03/2022'
+__date__ = '2/04/2022'
 
 
 class Settings(object):
@@ -18,8 +18,8 @@ class Settings(object):
         :param environment_dir: str
         :param load: bool
         """
-        self.save_intervals = []
-        self.save_model_interval = 1000
+        self.save_intervals = [1, 5, 10]
+        self.save_model_interval = 100
         self.delta_genome_threshold = 0.75
         self.distance_weights = {
             'activation': 0.1,
