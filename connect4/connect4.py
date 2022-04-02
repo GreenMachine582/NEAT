@@ -4,8 +4,8 @@ from .visualize import GameBoard, Piece
 
 import mattslib.pygame as mlpg
 
-__version__ = '1.4.2'
-__date__ = '1/04/2022'
+__version__ = '1.4.3'
+__date__ = '2/04/2022'
 
 
 class Connect4:
@@ -16,7 +16,8 @@ class Connect4:
 
     ROWS, COLUMNS = 6, 7
     LENGTH = 4
-    PLAYERS = {0: {'id': 1, 'name': 'Red'}, 1: {'id': 2, 'name': 'Yellow'}}
+    MAX_PLAYERS = 2
+    PLAYERS = ['Red', 'Yellow']
     INVALID_MOVE, EMPTY, DRAW, WIN = -2, -1, 0, 1
 
     def __init__(self, game_dims: tuple = None):
@@ -108,40 +109,46 @@ class Connect4:
         self.current_player = self.opponent
         self.opponent = abs(self.current_player - 1)
 
-    def getPieceSlices(self, move: tuple) -> tuple:
+    def getPieceSlices(self, move: tuple) -> dict:
         """
         Gets the piece slices around the move and counts connecting pieces.
         :param move: tuple[int, int]
         :return:
-            - directions, counts - tuple[dict[str: dict[tuple[int, int]: list[int]]], dict[tuple[int, int]: int]]
+            - directions - dict[str: dict[tuple[int, int]: list[int]]]
         """
         directions = {'vertical': {(1, 0): [], (-1, 0): []},
                       'horizontal': {(0, 1): [], (0, -1): []},
                       'diagonal1': {(-1, 1): [], (1, -1): []},
                       'diagonal2': {(1, 1): [], (-1, -1): []}}
+        for direction_pair in directions:
+            search_length = self.ROWS if direction_pair != 'horizontal' else self.COLUMNS
+            for direction in directions[direction_pair]:
+                if directions[direction_pair][direction] is not None:
+                    directions[direction_pair][direction].append(self.board[move[0]][move[1]])
+                    for n in range(1, search_length):
+                        a, b = move[0] + (n * direction[0]), move[1] + (n * direction[1])
+                        if 0 <= a < self.ROWS and 0 <= b < self.COLUMNS:
+                            directions[direction_pair][direction].append(self.board[a][b])
+                        else:
+                            break
+        return directions
+
+    def getConnectionCounts(self, directions, player: int = None):
         counts = {}
+        if player is None:
+            player = self.current_player
         for direction_pair in directions:
             counts[direction_pair] = []
             for direction in directions[direction_pair]:
                 connection_count = 0
                 count_connections = True
-                if directions[direction_pair][direction] is not None:
-                    directions[direction_pair][direction].append(self.PLAYERS[self.current_player]['id'])
-                    for n in range(1, self.LENGTH):
-                        a, b = move[0] + (n * direction[0]), move[1] + (n * direction[1])
-                        if 0 <= a < self.ROWS and 0 <= b < self.COLUMNS:
-                            if self.board[a][b] == self.current_player:
-                                directions[direction_pair][direction].append(self.current_player)
-                                if count_connections:
-                                    connection_count += 1
-                            else:
-                                count_connections = False
-                                directions[direction_pair][direction].append(self.board[a][b])
-                        else:
-                            directions[direction_pair][direction].append(self.INVALID_MOVE)  # out of bounds
-
+                for piece_key in range(1, len(directions[direction_pair][direction])):
+                    if directions[direction_pair][direction][piece_key] == player and count_connections:
+                        connection_count += 1
+                    else:
+                        count_connections = False
                 counts[direction_pair].append(connection_count)
-        return directions, counts
+        return counts
 
     def winChecker(self, move: tuple) -> None:
         """
@@ -152,9 +159,10 @@ class Connect4:
         """
         win = False
 
-        directions, counts = self.getPieceSlices(move)
-        for direction_pair in counts:
-            if sum(counts[direction_pair]) >= self.LENGTH - 1:
+        directions = self.getPieceSlices(move)
+        connection_counts = self.getConnectionCounts(directions)
+        for direction_pair in directions:
+            if sum(connection_counts[direction_pair]) + 1 >= self.LENGTH:
                 if self.visible:
                     self.showWin(move, directions[direction_pair])
                 win = True
@@ -191,7 +199,7 @@ class Connect4:
             - None
         """
         if self.visible:
-            self.game_board.update(text=f"{self.PLAYERS[self.current_player]['name']}'s turn!")
+            self.game_board.update(text=f"{self.PLAYERS[self.current_player]}'s turn!")
             self.game_board.draw(surface)
 
     def main(self, possible_move: int) -> None:
