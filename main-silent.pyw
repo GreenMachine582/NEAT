@@ -216,6 +216,7 @@ def checkBest(player_key: int, match_range: int = 50, win_threshold: float = 0.7
               f" (win rate): {win_count/match_range}")
         file = MODELS_DIR + MODEL_NAME % (PLAYER_TYPES[1], players[player_key]['difficulty'])
         players[player_key]['neat'].save(file)
+        setup(players)
 
 
 def close() -> None:
