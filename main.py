@@ -43,8 +43,8 @@ MODEL_NAME = "%s_%s"
 
 
 # Globals - Defaults
-players = [{'type': PLAYER_TYPES[1], 'difficulty': DIFFICULTY[0], 'neat': None},
-           {'type': PLAYER_TYPES[2], 'difficulty': DIFFICULTY[0], 'neat': None}]
+players = [{'type': PLAYER_TYPES[1], 'difficulty': DIFFICULTY[1], 'neat': None},
+           {'type': PLAYER_TYPES[2], 'difficulty': DIFFICULTY[1], 'neat': None}]
 game_speed = SPEEDS[-1]
 evolution_speed = SPEEDS[-1]
 show_every = SHOW_EVERY[1]
@@ -70,6 +70,9 @@ network = None
 info = None
 menu = None
 options = None
+
+if not os.path.exists(os.path.dirname(MODELS_DIR)):
+    os.makedirs(os.path.dirname(MODELS_DIR))
 
 
 def getSpeedShow() -> tuple:
@@ -182,10 +185,10 @@ def neatMove(player: dict, genome: Genome) -> int:
     return move[1]
 
 
-def checkBest(player_key: int, match_range: int = 50, win_threshold: float = 0.75) -> None:
+def checkBest(player_key: int, match_range: int = 50, win_threshold: float = 0.65) -> None:
     """
     Update the best neat for each difficulty depending on win rate with current
-    trained neat.
+    train neat.
     :param player_key: int
     :param match_range: int
     :param win_threshold: float

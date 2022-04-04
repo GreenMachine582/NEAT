@@ -44,8 +44,8 @@ MODEL_NAME = "%s_%s"
 
 # Globals - Defaults
 players = [{'type': PLAYER_TYPES[0], 'difficulty': DIFFICULTY[0], 'neat': None},
-           {'type': PLAYER_TYPES[0], 'difficulty': DIFFICULTY[0], 'neat': None}]
-game_speed = SPEEDS[-1]
+           {'type': PLAYER_TYPES[0], 'difficulty': DIFFICULTY[1], 'neat': None}]
+game_speed = SPEEDS[1]
 evolution_speed = SPEEDS[-1]
 show_every = SHOW_EVERY[1]
 max_fps = max(FPS, max(game_speed, evolution_speed))
@@ -70,6 +70,9 @@ network = None
 info = None
 menu = None
 options = None
+
+if not os.path.exists(os.path.dirname(MODELS_DIR)):
+    os.makedirs(os.path.dirname(MODELS_DIR))
 
 
 def getSpeedShow() -> tuple:
@@ -182,7 +185,7 @@ def neatMove(player: dict, genome: Genome) -> int:
     return move[1]
 
 
-def checkBest(player_key: int, match_range: int = 50, win_threshold: float = 0.75) -> None:
+def checkBest(player_key: int, match_range: int = 50, win_threshold: float = 0.65) -> None:
     """
     Update the best neat for each difficulty depending on win rate with current
     trained neat.
@@ -211,7 +214,7 @@ def checkBest(player_key: int, match_range: int = 50, win_threshold: float = 0.7
                     win_count += 1
                 connect4.reset()
                 run = False
-    if (win_count / match_range) > win_threshold:
+    if (win_count / match_range) >= win_threshold:
         print(f"New Best {players[player_key]['difficulty']} NEAT Gen[{players[player_key]['neat'].generation}]"
               f" (win rate): {win_count/match_range}")
         file = MODELS_DIR + MODEL_NAME % (PLAYER_TYPES[1], players[player_key]['difficulty'])
