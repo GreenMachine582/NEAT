@@ -29,6 +29,10 @@ class GameBoard:
         self.game_board = [[Piece((h, j), self.rows, self.columns, self.colour[-1], self.game_height)
                             for j in range(self.columns)] for h in range(self.rows)]
 
+        self.column_labels = [mlpg.Message(i + 1, (self.game_board[0][i].pos[0] + self.game_board[0][i].radius,
+                                                   (self.game_height - 35)), size=30)
+                              for i in range(self.columns)]
+
     def update(self, **kwargs):
         if 'text' in kwargs:
             self.player_text.update(text=kwargs['text'])
@@ -56,6 +60,8 @@ class GameBoard:
         for row in self.game_board:
             for piece in row:
                 piece.draw(surface)
+        for label in self.column_labels:
+            label.draw(surface)
 
 
 class Piece:
@@ -64,7 +70,7 @@ class Piece:
     """
 
     BOARDER = 38
-    TOP_PADDING = 80
+    TOP_PADDING = 60
     SPACING = 10
 
     def __init__(self, coordinates: tuple, rows: int, cols: int, colour: list, game_height: int | float):
