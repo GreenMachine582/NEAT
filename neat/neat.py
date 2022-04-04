@@ -284,10 +284,10 @@ class NEAT(object):
             - None
         """
         leading_genomes = [specie.members[specie.representative] for specie in self.species]
-        best_genome = leading_genomes[0]
-        for genome in range(1, len(leading_genomes)):
-            if leading_genomes[genome].fitness > best_genome.fitness:
-                best_genome = leading_genomes[genome]
+        best_genome = self.best_genome
+        for genome in leading_genomes:
+            if genome.fitness > best_genome.fitness:
+                best_genome = genome
         self.best_genome = deepcopy(best_genome)
 
     def getGenome(self, specie: int = None, genome: int = None) -> Genome:
