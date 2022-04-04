@@ -10,7 +10,7 @@ from mattslib.dict import countOccurrence, getKeyByWeights
 from mattslib.file import read, write
 
 __version__ = '1.4.6'
-__date__ = '2/04/2022'
+__date__ = '4/04/2022'
 
 
 def genomicCrossover(x_member: Genome, y_member: Genome) -> Genome:
