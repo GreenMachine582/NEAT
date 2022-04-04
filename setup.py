@@ -9,5 +9,5 @@ setup(
     license="BSD",
     description='Application of a NEAT with Connect 4',
     long_description='Application of a NEAT (NeuroEvolution of Augmenting Topologies) with a Connect 4 environment',
-    packages=['connect4', 'mattslib', 'mattslib/pygame', 'neat'],
+    packages=['mattslib', 'neat'],
 )
