@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from pygame import font
 
-__version__ = '1.2.1'
-__date__ = '20/03/2022'
+import mattslib.pygame as mlpg
+
+__version__ = '1.2.2'
+__date__ = '5/04/2022'
 
 
 font.init()
@@ -24,9 +26,10 @@ class Message(object):
         """
         self.text = text
         self.pos = pos
-        self.colour = colour if colour is not None else [0, 0, 0]
+        self.colour = colour if colour is not None else mlpg.BLACK
         self.size = size
         self.align = align
+
         self.font = 'freesansbold.ttf'
 
         self.text_surface = None
