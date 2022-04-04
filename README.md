@@ -1,2 +1,2 @@
 # NEAT
-Connect 4 with NEAT (NeuroEvolution of Augmenting Topologies)
+Application of a NEAT (NeuroEvolution of Augmenting Topologies) with a Connect 4 environment.
