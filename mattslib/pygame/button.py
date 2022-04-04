@@ -189,6 +189,9 @@ class ButtonGroup:
 
         if 'colour' in kwargs:
             self.colour = kwargs['colour']
+        if 'text_colour' in kwargs:
+            for button_key in self.buttons:
+                self.buttons[button_key].update(colour=kwargs['text_colour'])
         if 'active_colour' in kwargs:
             self.active_colour = kwargs['active_colour']
         if 'button_states' in kwargs:
