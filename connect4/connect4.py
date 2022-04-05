@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .visualize import GameBoard, Piece
+from .visualize import GameBoard
 
 import mattslib.pygame as mlpg
 
