@@ -27,7 +27,7 @@ MENU_WIDTH, MENU_HEIGHT = ADDON_PANEL[0], NETWORK_BOX[1] - INFO_BOX[1]
 OPTION_WIDTH, OPTION_HEIGHT = WIDTH, HEIGHT
 
 FPS = 40
-display = True
+display = False
 dark_mode = True
 
 ENVIRONMENT = 'connect4'
@@ -46,7 +46,7 @@ MODEL_NAME = "%s_%s"
 # Globals - Defaults
 players = [{'type': PLAYER_TYPES[1], 'difficulty': DIFFICULTY[1], 'neat': None},
            {'type': PLAYER_TYPES[2], 'difficulty': DIFFICULTY[1], 'neat': None}]
-game_speed = SPEEDS[1]
+game_speed = SPEEDS[-1]
 evolution_speed = SPEEDS[-1]
 show_every = SHOW_EVERY[1]
 max_fps = max(FPS, max(game_speed, evolution_speed))

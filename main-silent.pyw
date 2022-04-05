@@ -45,7 +45,7 @@ MODEL_NAME = "%s_%s"
 
 # Globals - Defaults
 players = [{'type': PLAYER_TYPES[1], 'difficulty': DIFFICULTY[1], 'neat': None},
-           {'type': PLAYER_TYPES[2], 'difficulty': DIFFICULTY[1], 'neat': None}]
+           {'type': PLAYER_TYPES[0], 'difficulty': DIFFICULTY[1], 'neat': None}]
 game_speed = SPEEDS[1]
 evolution_speed = SPEEDS[-1]
 show_every = SHOW_EVERY[1]
@@ -249,11 +249,14 @@ class Menu:
         self.colour = {'background': mlpg.WHITE}
 
         self.buttons = [
-            mlpg.Button("Reset", (MENU_WIDTH * (1 / 3), MENU_HEIGHT * (1 / 3)), mlpg.LIGHT_GRAY, handler=connect4.reset),
-            mlpg.Button("Options", (MENU_WIDTH * (2 / 3), MENU_HEIGHT * (1 / 3)), mlpg.LIGHT_GRAY, handler=options.main),
+            mlpg.Button("Reset", (MENU_WIDTH * (1 / 3), MENU_HEIGHT * (1 / 3)), mlpg.LIGHT_GRAY,
+                        handler=connect4.reset),
+            mlpg.Button("Options", (MENU_WIDTH * (2 / 3), MENU_HEIGHT * (1 / 3)), mlpg.LIGHT_GRAY,
+                        handler=options.main),
             mlpg.Button("Switch", (MENU_WIDTH * (1 / 3), MENU_HEIGHT * (2 / 3)), mlpg.LIGHT_GRAY,
                         handler=connect4.switchPlayer),
-            mlpg.Button("QUIT", (MENU_WIDTH * (2 / 3), MENU_HEIGHT * (2 / 3)), mlpg.LIGHT_GRAY, handler=close)]
+            mlpg.Button("QUIT", (MENU_WIDTH * (2 / 3), MENU_HEIGHT * (2 / 3)), mlpg.LIGHT_GRAY,
+                        handler=close)]
 
         self.update(kwargs=kwargs)
 

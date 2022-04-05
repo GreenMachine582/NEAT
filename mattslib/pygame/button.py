@@ -6,8 +6,8 @@ import mattslib.pygame as mlpg
 from .message import Message
 from .shape import Rect, Circle
 
-__version__ = '1.2.1'
-__date__ = '21/03/2022'
+__version__ = '1.2.2'
+__date__ = '5/04/2022'
 
 
 def changeColour(colour: list, change_by: Any) -> list:
@@ -198,6 +198,9 @@ class ButtonGroup:
                 self.buttons[button_key].update(text_colour=kwargs['text_colour'])
         if 'active_colour' in kwargs:
             self.active_colour = kwargs['active_colour']
+            for button_key in self.buttons:
+                if self.button_states[button_key]:
+                    self.buttons[button_key].update(colour=self.active_colour)
         if 'button_states' in kwargs:
             self.button_states = kwargs['button_states']
         if 'active' in kwargs:
