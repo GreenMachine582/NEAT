@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import pygame as pg
+
+import mattslib.pygame as mlpg
 from .message import Message
 from .shape import Rect, Circle
 
@@ -189,9 +191,11 @@ class ButtonGroup:
 
         if 'colour' in kwargs:
             self.colour = kwargs['colour']
+            for button_key in self.buttons:
+                self.buttons[button_key].update(colour=self.colour)
         if 'text_colour' in kwargs:
             for button_key in self.buttons:
-                self.buttons[button_key].update(colour=kwargs['text_colour'])
+                self.buttons[button_key].update(text_colour=kwargs['text_colour'])
         if 'active_colour' in kwargs:
             self.active_colour = kwargs['active_colour']
         if 'button_states' in kwargs:
