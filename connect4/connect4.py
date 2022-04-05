@@ -20,7 +20,12 @@ class Connect4:
     PLAYERS = ['Red', 'Yellow']
     INVALID_MOVE, EMPTY, DRAW, WIN = -2, -1, 0, 1
 
-    def __init__(self, game_dims: tuple = None):
+    def __init__(self, game_dims: tuple = None, **kwargs: Any):
+        """
+        Initiates the object with required values.
+        :param game_dims: tuple[int | float, int | float]
+        :param kwargs: Any
+        """
         self.current_player = 0
         self.opponent = abs(self.current_player - 1)
         self.match = True
@@ -32,9 +37,13 @@ class Connect4:
 
         self.board = [[self.EMPTY for _ in range(self.COLUMNS)] for _ in range(self.ROWS)]
         self.game_board = None
+
+        if 'kwargs' in kwargs:
+            kwargs = kwargs['kwargs']
+
         if game_dims is not None:
             self.visible = True
-            self.game_board = GameBoard(game_dims, self.ROWS, self.COLUMNS)
+            self.game_board = GameBoard(game_dims, self.ROWS, self.COLUMNS, kwargs=kwargs)
 
     def reset(self) -> None:
         """
