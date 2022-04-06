@@ -14,8 +14,8 @@ from neat import NEAT
 import mattslib as ml
 import mattslib.pygame as mlpg
 
-__version__ = '1.5.6'
-__date__ = '5/04/2022'
+__version__ = '1.5.7'
+__date__ = '6/04/2022'
 
 # Constants
 WIDTH, HEIGHT = 1120, 640
@@ -110,7 +110,7 @@ def setup(users: list) -> list:
     for player_key in range(connect4.MAX_PLAYERS):
         current_player = users[player_key]
         users[player_key]['neat'] = None
-        if current_player != PLAYER_TYPES[0]:
+        if current_player['type'] != PLAYER_TYPES[0]:
             users[player_key]['neat'] = setupAi(current_player)
     return users
 
@@ -124,13 +124,6 @@ def setupAi(current_player: dict, outputs: int = 1, population: int = 100) -> NE
     :return:
         - neat - NEAT
     """
-    if current_player['type'] == PLAYER_TYPES[1]:
-        file = MODELS_DIR + MODEL_NAME % (current_player['type'], current_player['difficulty'])
-        if os.path.isfile(file + '.neat'):
-            neat = NEAT.load(file)
-            return neat
-        else:
-            current_player['type'] = PLAYER_TYPES[2]
     file = MODELS_DIR + MODEL_NAME % (current_player['type'], current_player['difficulty'])
     if os.path.isfile(file + '.neat'):
         neat = NEAT.load(file)
@@ -138,6 +131,7 @@ def setupAi(current_player: dict, outputs: int = 1, population: int = 100) -> NE
         neat = NEAT(ENVIRONMENT_DIR)
         inputs = NEAT_INPUTS[current_player['difficulty']]
         neat.generate(inputs, outputs, population=population)
+        neat.save(file)
     return neat
 
 
@@ -185,7 +179,7 @@ def neatMove(player: dict, genome: Genome) -> int:
     return move[1]
 
 
-def checkBest(player_key: int, match_range: int = 50, win_threshold: float = 0.65) -> None:
+def checkBest(player_key: int, match_range: int = 50, win_threshold: float = 0.05) -> None:
     """
     Update the best neat for each difficulty depending on win rate with current
     trained neat.
@@ -210,13 +204,13 @@ def checkBest(player_key: int, match_range: int = 50, win_threshold: float = 0.6
                 connect4.main(possible_move)
 
             if not connect4.match:
-                if connect4.result == connect4.WIN and connect4.current_player == player_key:
-                    win_count += 1
+                if connect4.result == connect4.WIN:
+                    win_count += 1 if connect4.current_player == player_key else -1
                 connect4.reset()
                 run = False
     if (win_count / match_range) >= win_threshold:
         print(f"New Best {players[player_key]['difficulty']} NEAT Gen[{players[player_key]['neat'].generation}]"
-              f" (win rate): {win_count/match_range}")
+              f" (win rate): {round(win_count / match_range * 100, 2)}%")
         file = MODELS_DIR + MODEL_NAME % (PLAYER_TYPES[1], players[player_key]['difficulty'])
         players[player_key]['neat'].save(file)
         setup(players)
