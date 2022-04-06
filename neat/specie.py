@@ -9,13 +9,13 @@ from .genome import Genome
 from mattslib.dict import countOccurrence, sortIntoDict
 from mattslib.math_util import mean
 
-__version__ = '1.4.4'
-__date__ = '1/04/2022'
+__version__ = '1.4.5'
+__date__ = '6/04/2022'
 
 
 def genomicDistance(x_member: Genome, y_member: Genome, distance_weights: dict) -> float:
     """
-    Calculates the distance between genomes by summing the distance between the corresponding genes.
+    Calculates the distance between genomes by summing the weighted genes.
     :param x_member: Genome
     :param y_member: Genome
     :param distance_weights: dict[str: int | float]
@@ -23,15 +23,14 @@ def genomicDistance(x_member: Genome, y_member: Genome, distance_weights: dict) 
         - distance - float
     """
     genomic_distance = 0
+
     x_connections = list(x_member.connections)
     y_connections = list(y_member.connections)
     connections = countOccurrence(x_connections + y_connections)
-
-    matching_connections = [pos for pos in connections if connections[pos] >= 2]
+    matching_connections = [pos for pos in connections if connections[pos] == 2]
     disjoint_connections = [pos for pos in connections if connections[pos] == 1]
 
-    connections_count = len(max(x_connections, y_connections))
-    nodes_count = min(x_member.total_nodes, y_member.total_nodes)
+    connections_count = max(len(x_connections), len(y_connections))
 
     genomic_distance += distance_weights['node'] * (abs(x_member.total_nodes - y_member.total_nodes) /
                                                     max(x_member.total_nodes, y_member.total_nodes))
@@ -40,12 +39,12 @@ def genomicDistance(x_member: Genome, y_member: Genome, distance_weights: dict) 
     weight_diff = 0
     for pos in matching_connections:
         weight_diff += abs(x_member.connections[pos].weight - y_member.connections[pos].weight)
-
     genomic_distance += distance_weights['weight'] * (weight_diff / len(matching_connections))
 
+    nodes_count = min(x_member.total_nodes, y_member.total_nodes)
     activation_diff, bias_diff = 0, 0
     for node in range(nodes_count):
-        activation_diff += 1 if x_member.nodes[node].activation != y_member.nodes[node].activation else 0
+        activation_diff += 0 if x_member.nodes[node].activation == y_member.nodes[node].activation else 1
         bias_diff += abs(x_member.nodes[node].bias - y_member.nodes[node].bias)
 
     genomic_distance += distance_weights['activation'] * (activation_diff / nodes_count)
@@ -65,7 +64,7 @@ class Specie(object):
         """
         self.settings = settings
         self.members = [member]
-        self.representative = 0
+        self.representative = member
         self.fitness_history = []
         self.fitness_mean = 0
 
@@ -90,7 +89,7 @@ class Specie(object):
         if len(self.fitness_history) > self.settings.max_fitness_history:
             self.fitness_history.pop(0)
 
-    def killGenomes(self, remove_duplicate: bool, elitism: bool = False) -> None:
+    def killGenomes(self, remove_duplicate: bool = False, elitism: bool = False) -> None:
         """
         Kills duplicate genomes and a portion of inferior genomes.
         :param remove_duplicate: bool
@@ -105,18 +104,19 @@ class Specie(object):
             duplicate_genomes = []
 
             for genome_key, distance in enumerate(distances):
-                if genome_key != self.representative and distance <= self.settings.duplicate_distance_threshold:
-                    duplicate_genomes.append(genome_key)
+                if self.members[genome_key] != self.representative:
+                    if distance <= self.settings.duplicate_distance_threshold:
+                        duplicate_genomes.append(genome_key)
 
             duplicate_genomes = duplicate_genomes[::-1]
             for genome_key in duplicate_genomes:
                 self.members.pop(genome_key)
 
-        ids = [i for i in range(len(self.members))]
+        ids = [member_key for member_key in range(len(self.members))]
         sorted_ids = sortIntoDict(ids, sort_with=self.getAllFitnesses())
 
-        sorted_fitness_keys = sorted(list(sorted_ids.keys()), reverse=True)
-        surviving_members, surviving_distances = [], []
+        sorted_fitness_keys = sorted(list(sorted_ids.keys()))
+        surviving_members = []
         for fitness_key in sorted_fitness_keys:
             for member_id in sorted_ids[fitness_key]:
                 if len(surviving_members) < max_survive:
@@ -127,14 +127,14 @@ class Specie(object):
 
     def updateRepresentative(self) -> None:
         """
-        Searches through members in specie for leading genome with the highest
-        fitness to be the representative.
+        Representative is assigned by member with the highest adjusted fitness.
         :return:
             - None
         """
-        for i, member in enumerate(self.members):
-            if member.fitness > self.members[self.representative].fitness:
-                self.representative = i
+        self.representative = self.members[0]
+        for member in self.members:
+            if member.adjusted_fitness > self.representative.adjusted_fitness:
+                self.representative = member
 
     def getDistances(self) -> list:
         """
@@ -143,16 +143,16 @@ class Specie(object):
             - distances - list[int | float]
         """
         distances = []
-        for member_key, member in enumerate(self.members):
+        for member in self.members:
             distance = 0
-            if member_key != self.representative:
-                distance = genomicDistance(member, self.members[self.representative], self.settings.distance_weights)
+            if member != self.representative:
+                distance = genomicDistance(member, self.representative, self.settings.distance_weights)
             distances.append(distance)
         return distances
 
     def shouldSurvive(self) -> bool:
         """
-        Checks the fitness against settings to permit survival.
+        Checks if the specie meets the minimum requirements to survive.
         :return:
             - survive - bool
         """
@@ -164,8 +164,8 @@ class Specie(object):
 
     def getAllFitnesses(self) -> list:
         """
-        Gets the fitness of each member in specie.
+        Gets the adjusted fitness of each member in specie.
         :return:
             - fitnesses - list[int | float]
         """
-        return [member.fitness for member in self.members]
+        return [member.adjusted_fitness for member in self.members]

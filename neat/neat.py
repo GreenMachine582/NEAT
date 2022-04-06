@@ -9,8 +9,8 @@ from .specie import Specie, genomicDistance
 from mattslib.dict import countOccurrence, getKeyByWeights
 from mattslib.file import read, write
 
-__version__ = '1.4.6'
-__date__ = '4/04/2022'
+__version__ = '1.4.7'
+__date__ = '6/04/2022'
 
 
 def genomicCrossover(x_member: Genome, y_member: Genome) -> Genome:
@@ -23,10 +23,7 @@ def genomicCrossover(x_member: Genome, y_member: Genome) -> Genome:
     """
     child = Genome(x_member.inputs, x_member.outputs, x_member.node_info)
 
-    x_connections = list(x_member.connections)
-    y_connections = list(y_member.connections)
-    connections = countOccurrence(x_connections + y_connections)
-
+    connections = countOccurrence(list(x_member.connections) + list(y_member.connections))
     matching_connections = [pos for pos in connections if connections[pos] == 2]
     disjoint_connections = [pos for pos in connections if connections[pos] == 1]
 
@@ -34,19 +31,15 @@ def genomicCrossover(x_member: Genome, y_member: Genome) -> Genome:
         parent = random.choice([x_member, y_member])
         child.connections[pos] = deepcopy(parent.connections[pos])
 
-    if x_member.fitness > y_member.fitness:
-        for pos in x_connections:
-            if pos in disjoint_connections:
-                child.connections[pos] = deepcopy(x_member.connections[pos])
-    else:
-        for pos in y_connections:
-            if pos in disjoint_connections:
-                child.connections[pos] = deepcopy(y_member.connections[pos])
+    members_fitnesses = {x_member: x_member.adjusted_fitness, y_member: y_member.adjusted_fitness}
+    leading_member = max(members_fitnesses, key=members_fitnesses.get)
+    for pos in list(leading_member.connections):
+        if pos in disjoint_connections:
+            child.connections[pos] = deepcopy(leading_member.connections[pos])
 
     child.total_nodes = 0
     for pos in child.connections:
-        current_max = max(pos[0], pos[1])
-        child.total_nodes = max(child.total_nodes, current_max)
+        child.total_nodes = max(child.total_nodes, max(pos[0], pos[1]))
     child.total_nodes += 1
 
     for node in range(child.total_nodes):
@@ -56,13 +49,10 @@ def genomicCrossover(x_member: Genome, y_member: Genome) -> Genome:
         if node in y_member.nodes:
             inherit_from.append(y_member)
 
-        random.shuffle(inherit_from)
-        parent, fitness = inherit_from[0], inherit_from[0].fitness
-        for member in inherit_from:
-            if member.fitness > fitness:
-                parent, fitness = member, member.fitness
-        child.nodes[node] = deepcopy(parent.nodes[node])
-
+        if leading_member in inherit_from:
+            child.nodes[node] = deepcopy(leading_member.nodes[node])
+        else:
+            child.nodes[node] = deepcopy(inherit_from[0].nodes[node])
     child.reset()
     return child
 
@@ -153,108 +143,105 @@ class NEAT(object):
             return False
         return True
 
-    def evolve(self) -> None:
+    def evolve(self, minimum_fitness: int = 0) -> None:
         """
-        Updates the fitness for each specie, if no progress has been made then
-        mutate, else kill a portion of the population and repopulate.
+        Evolves the NEAT by culling, repopulating and mutating the populace.
+        :param minimum_fitness: int
         :return:
             - None
         """
-
-        # Calculates the generation fitness
-        fitness_sum = 0
         for specie in self.species:
             specie.updateFitness()
-            fitness_sum += specie.fitness_mean
+            specie.updateFitnessHistory()
+            specie.updateRepresentative()
 
-        # Mutates all genomes since fitness didn't reach minimum requirements
-        if fitness_sum <= 0:
+        if self.getFitnessSum() > minimum_fitness:
+            kill_species = []
+            for specie_key, specie in enumerate(self.species):
+                if not self.cullPopulation(specie):
+                    kill_species.append(specie_key)
+            for specie_key in kill_species[::-1]:
+                self.species.pop(specie_key)
+
+            self.repopulate()
+        else:
+            # Mutates all genomes since fitness didn't reach minimum requirements
             for specie in self.species:
                 for member in specie.members:
                     member.mutate(self.settings.mutation_probabilities)
-        else:
-            self.killPopulation()
-            self.repopulate()
         self.generation += 1
 
-    def killPopulation(self) -> None:
+    def cullPopulation(self, specie: Specie) -> bool:
         """
-        Removes species that had unfavorable fitness results and then removes
-        a portion of genomes.
+        Culls the population by selective killing, either removing the specie as a whole,
+        removing duplicate members or kill a portion of the species members.
+        :param specie: Specie
         :return:
-            - None
+            - survive - bool
         """
-        # Kills species that did not meet minimum requirements
-        surviving_species = []
-        for specie in self.species:
-            if specie.shouldSurvive():
-                surviving_species.append(specie)
-        self.species = surviving_species
-
-        # Kills a portion of the remaining members in each specie
-        for i, specie in enumerate(self.species):
+        # Kills specie that did not meet minimum requirements
+        if not specie.shouldSurvive():
+            return False
+        else:
             remove_duplicate = False
             if self.generation % self.settings.remove_duplicate_interval == 0 and self.generation != 0:
                 remove_duplicate = True
             specie.killGenomes(remove_duplicate)
             specie.updateRepresentative()
+        return True
 
     def repopulate(self) -> None:
         """
-        Repopulates the population by breeding new child genomes, clones the
-        best genome or creates fresh genomes.
+        Repopulates the populace by breeding new child genomes, cloning the
+        best genome or creates fresh genomes with mutations.
         :return:
             - None
         """
-        fitness_sum = 0
-        for specie in self.species:
-            specie.updateFitness()
-            specie.updateFitnessHistory()
-            fitness_sum += specie.fitness_mean
         if self.species:
+            for specie in self.species:
+                specie.updateFitness()
+            fitness_sum = self.getFitnessSum()
+
             # Breeds the surviving populace
-            temp_species = deepcopy(self.species)
+            temp_species = self.species[:]
             for specie_key, specie in enumerate(temp_species):
                 if fitness_sum != 0:
                     population_diff = self.population - self.getPopulation()
                     offspring = round((specie.fitness_mean / fitness_sum) * population_diff)
                     fitness_sum -= specie.fitness_mean
                     for _ in range(offspring):
-                        child = self.breed(self.settings.breed_probabilities, specie_key)
+                        child = self.breed(self.settings.breed_probabilities, specie)
                         self.classifyGenome(child)
-            if self.getPopulation() == self.population:
-                return
-        # Introduces new species and genomes
+        # Introduces new species and genomes if populace is not restored
         for p in range(self.population - self.getPopulation()):
             genome = deepcopy(self.best_genome) if p % 3 == 0 else Genome(self.inputs, self.outputs,
                                                                           self.settings.node_info)
             genome.mutate(self.settings.mutation_probabilities)
             self.classifyGenome(genome)
 
-    def breed(self, probabilities: dict, specie_key: int) -> Genome:
+    def breed(self, probabilities: dict, specie: Specie) -> Genome:
         """
         Breeds a new genome with given probabilities.
         :param probabilities: dict[str: dict[str: int]]
-        :param specie_key: int
+        :param specie: Specie
         :return:
             - child - Genome
         """
-        crossover_by = getKeyByWeights(probabilities['crossover'])
         breed_by = getKeyByWeights(probabilities['breed'])
 
-        x_member, y_member = None, None
-        if crossover_by == 'intraspecies' or breed_by == 'asexual' or len(self.species) < 2:
-            if breed_by == "asexual" or len(self.species[specie_key].members) == 1:
-                child = deepcopy(random.choice(self.species[specie_key].members))
-                child.mutate(self.settings.mutation_probabilities)
-                return child
-            elif breed_by == 'sexual':
-                (x_member, y_member) = random.sample(self.species[specie_key].members, 2)
-        elif crossover_by == 'interspecies':
-            species = [i for i in range(len(self.species)) if i != specie_key]
-            x_member = random.choice(self.species[specie_key].members)
-            y_member = random.choice(self.species[random.choice(species)].members)
-        return genomicCrossover(x_member, y_member)
+        if breed_by == "asexual" or len(specie.members) == 1:
+            child = deepcopy(random.choice(specie.members))
+            child.mutate(self.settings.mutation_probabilities)
+            return child
+        else:  # sexual
+            crossover_by = getKeyByWeights(probabilities['crossover'])
+            if crossover_by == 'intraspecies' or len(self.species) < 2:
+                (x_member, y_member) = random.sample(specie.members, 2)
+            else:  # interspecies
+                species = [i for i in self.species if i != specie]
+                x_member = random.choice(specie.members)
+                y_member = random.choice(random.choice(species).members)
+            return genomicCrossover(x_member, y_member)
 
     def classifyGenome(self, genome: Genome) -> None:
         """
@@ -267,8 +254,7 @@ class NEAT(object):
         classified = False
         if len(self.species) > 0:
             for specie in self.species:
-                representative = specie.members[specie.representative]
-                distance = genomicDistance(genome, representative, self.settings.distance_weights)
+                distance = genomicDistance(genome, specie.representative, self.settings.distance_weights)
                 if distance <= self.settings.delta_genome_threshold:
                     specie.members.append(genome)
                     classified = True
@@ -283,12 +269,21 @@ class NEAT(object):
         :return:
             - None
         """
-        leading_genomes = [specie.members[specie.representative] for specie in self.species]
-        best_genome = self.best_genome
+        leading_genomes = [specie.representative for specie in self.species]
         for genome in leading_genomes:
-            if genome.fitness > best_genome.fitness:
-                best_genome = genome
-        self.best_genome = deepcopy(best_genome)
+            if genome.fitness > self.best_genome.fitness:
+                self.best_genome = deepcopy(genome)
+
+    def getFitnessSum(self) -> int | float:
+        """
+        Sums each species mean fitness.
+        :return:
+            - fitness_sum - int | float
+        """
+        fitness_sum = 0
+        for specie in self.species:
+            fitness_sum += specie.fitness_mean
+        return fitness_sum
 
     def getGenome(self, specie: int = None, genome: int = None) -> Genome:
         """
@@ -320,16 +315,16 @@ class NEAT(object):
                      'current_genome': self.current_genome+1, 'fitness': self.getGenome().fitness}
         return neat_info
 
-    def update(self, **kwargs: dict) -> None:
+    def update(self, **kwargs: Any) -> None:
         """
         Updates the best genome by searching for the highest fitness from
         each specie.
-        :param kwargs: dict[str: Any]
+        :param kwargs: Any
         :return:
             - None
         """
-        if 'settings' in kwargs:
-            self.settings = Settings(kwargs['settings'])
+        if 'environment_dir' in kwargs:
+            self.settings = Settings(kwargs['environment_dir'])
 
     def save(self, file_dir: str) -> None:
         """
