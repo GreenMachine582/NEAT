@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 from .visualize import GameBoard
-
 import mattslib.pygame as mlpg
 
-__version__ = '1.4.3'
-__date__ = '2/04/2022'
+__version__ = '1.4.4'
+__date__ = '6/04/2022'
 
 
 class Connect4:
@@ -114,7 +113,6 @@ class Connect4:
         :return:
             - None
         """
-        # loser goes first
         self.current_player = self.opponent
         self.opponent = abs(self.current_player - 1)
 
