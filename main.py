@@ -94,7 +94,7 @@ def getSpeedShow() -> tuple:
             return evolution_speed, False
     return game_speed, True
 
-
+8
 def getColourTheme() -> dict:
     if colour_theme == COLOUR_THEMES[1]:
         colours = {'text': mlpg.LIGHT_GRAY, 'button': mlpg.GRAY,
@@ -361,11 +361,12 @@ class Options:
                                                                  self.BOARDER + ((len(self.messages) - 1) * 90)),
                                                                 self.colours, colour_theme)
 
-    def update(self, mouse_pos: tuple = None, mouse_clicked: bool = False) -> bool:
+    def update(self, mouse_pos: tuple = None, mouse_clicked: bool = False, **kwargs: Any) -> bool:
         """
         Updates the option buttons, global variables and other related attributes.
         :param mouse_pos: tuple[int, int]
         :param mouse_clicked: bool
+        :param kwargs: Any
         :return:
             - continue - bool
         """
