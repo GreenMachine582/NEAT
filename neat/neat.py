@@ -28,8 +28,7 @@ def genomicCrossover(x_member: Genome, y_member: Genome) -> Genome:
     disjoint_connections = [pos for pos in connections if connections[pos] == 1]
 
     for pos in matching_connections:
-        parent = random.choice([x_member, y_member])
-        child.connections[pos] = deepcopy(parent.connections[pos])
+        child.connections[pos] = deepcopy(random.choice([x_member, y_member]).connections[pos])
 
     members_fitnesses = {x_member: x_member.adjusted_fitness, y_member: y_member.adjusted_fitness}
     leading_member = max(members_fitnesses, key=members_fitnesses.get)
@@ -39,7 +38,7 @@ def genomicCrossover(x_member: Genome, y_member: Genome) -> Genome:
 
     child.total_nodes = 0
     for pos in child.connections:
-        child.total_nodes = max(child.total_nodes, max(pos[0], pos[1]))
+        child.total_nodes = max([child.total_nodes, pos[0], pos[1]])
     child.total_nodes += 1
 
     for node in range(child.total_nodes):
