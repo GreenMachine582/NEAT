@@ -14,8 +14,8 @@ from neat import NEAT
 import mattslib as ml
 import mattslib.pygame as mlpg
 
-__version__ = '1.5.7'
-__date__ = '6/04/2022'
+__version__ = '1.5.8'
+__date__ = '7/04/2022'
 
 # Constants
 WIDTH, HEIGHT = 1120, 640
@@ -28,14 +28,14 @@ OPTION_WIDTH, OPTION_HEIGHT = WIDTH, HEIGHT
 
 FPS = 40
 display = False
-dark_mode = True
 
 ENVIRONMENT = 'connect4'
 PLAYER_TYPES = ['Human', 'Best', 'Train']
 DIFFICULTY = ['Medium', 'Hard']
 NEAT_INPUTS = {DIFFICULTY[0]: 2, DIFFICULTY[1]: 8}
-SHOW_EVERY = ['Genome', 'Generation', 'None']
 SPEEDS = [1, 2, 5, 100, 500]
+SHOW_EVERY = ['Genome', 'Generation', 'None']
+COLOUR_THEMES = ['Light', 'Dark']
 
 ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
 ENVIRONMENT_DIR = f"{ROOT_DIR}\\{ENVIRONMENT}"
@@ -46,10 +46,11 @@ MODEL_NAME = "%s_%s"
 # Globals - Defaults
 players = [{'type': PLAYER_TYPES[1], 'difficulty': DIFFICULTY[1], 'neat': None},
            {'type': PLAYER_TYPES[2], 'difficulty': DIFFICULTY[1], 'neat': None}]
-game_speed = SPEEDS[-1]
+game_speed = SPEEDS[1]
 evolution_speed = SPEEDS[-1]
-show_every = SHOW_EVERY[1]
 max_fps = max(FPS, max(game_speed, evolution_speed))
+show_every = SHOW_EVERY[1]
+colour_theme = COLOUR_THEMES[1]
 
 # Globals - Pygame
 if display:
@@ -94,25 +95,18 @@ def getSpeedShow() -> tuple:
     return game_speed, True
 
 
-def setup(users: list) -> list:
-    """
-    Sets the global variables and neats for players.
-    :param users: list[dict[str: Any]]
-    :return:
-        - users - list[dict[str: Any]]
-    """
-    global connect4, network, info, menu, options
-    connect4 = Connect4(GAME_PANEL, dark_mode=dark_mode)
-    network = visualize.Network(NETWORK_BOX, dark_mode=dark_mode)
-    info = visualize.Info(INFO_BOX, dark_mode=dark_mode)
-    options = Options(dark_mode=dark_mode)
-    menu = Menu(dark_mode=dark_mode)
-    for player_key in range(connect4.MAX_PLAYERS):
-        current_player = users[player_key]
-        users[player_key]['neat'] = None
-        if current_player['type'] != PLAYER_TYPES[0]:
-            users[player_key]['neat'] = setupAi(current_player)
-    return users
+def getColourTheme() -> dict:
+    if colour_theme == COLOUR_THEMES[1]:
+        colours = {'text': mlpg.LIGHT_GRAY, 'button': mlpg.GRAY,
+                   'selected': mlpg.DARK_GREEN, 'bg1': mlpg.DARK_GRAY, 'bg2': mlpg.GRAY,
+                   'input': mlpg.DARK_BLUE, 'output': mlpg.DARK_RED, 'hidden': mlpg.LIGHT_GRAY,
+                   'active': mlpg.DARK_GREEN, 'deactivated': mlpg.DARK_RED}
+    else:
+        colours = {'text': mlpg.BLACK, 'button': mlpg.LIGHT_GRAY,
+                   'selected': mlpg.GREEN, 'bg1': mlpg.WHITE, 'bg2': mlpg.LIGHT_GRAY,
+                   'input': mlpg.BLUE, 'output': mlpg.RED, 'hidden': mlpg.BLACK,
+                   'active': mlpg.GREEN, 'deactivated': mlpg.RED}
+    return colours
 
 
 def setupAi(current_player: dict, outputs: int = 1, population: int = 100) -> NEAT:
@@ -133,6 +127,28 @@ def setupAi(current_player: dict, outputs: int = 1, population: int = 100) -> NE
         neat.generate(inputs, outputs, population=population)
         neat.save(file)
     return neat
+
+
+def setup(users: list) -> list:
+    """
+    Sets the global variables and neats for players.
+    :param users: list[dict[str: Any]]
+    :return:
+        - users - list[dict[str: Any]]
+    """
+    global connect4, network, info, menu, options
+    colours = getColourTheme()
+    connect4 = Connect4(GAME_PANEL, colour_theme=colours)
+    network = visualize.Network(NETWORK_BOX, colour_theme=colours)
+    info = visualize.Info(INFO_BOX, colour_theme=colours)
+    options = Options(colour_theme=colours)
+    menu = Menu(colour_theme=colours)
+    for player_key in range(connect4.MAX_PLAYERS):
+        current_player = users[player_key]
+        users[player_key]['neat'] = None
+        if current_player['type'] != PLAYER_TYPES[0]:
+            users[player_key]['neat'] = setupAi(current_player)
+    return users
 
 
 def neatMove(player: dict, genome: Genome) -> int:
@@ -210,7 +226,7 @@ def checkBest(player_key: int, match_range: int = 50, win_threshold: float = 0.0
                 run = False
     if (win_count / match_range) >= win_threshold:
         print(f"New Best {players[player_key]['difficulty']} NEAT Gen[{players[player_key]['neat'].generation}]"
-              f" (win rate): {round(win_count / match_range * 100, 2)}%")
+              f" (win rate): {round(win_count / match_range * 100, 2)}")
         file = MODELS_DIR + MODEL_NAME % (PLAYER_TYPES[1], players[player_key]['difficulty'])
         players[player_key]['neat'].save(file)
         setup(players)
@@ -240,16 +256,15 @@ class Menu:
         Initiates the object with required values.
         :param kwargs: Any
         """
-        self.colour = {'background': mlpg.WHITE}
+        self.colours = getColourTheme()
 
         self.buttons = [
-            mlpg.Button("Reset", (MENU_WIDTH * (1 / 3), MENU_HEIGHT * (1 / 3)), mlpg.LIGHT_GRAY,
+            mlpg.Button("Reset", (MENU_WIDTH * (1 / 3), MENU_HEIGHT * (1 / 3)), self.colours['button'],
                         handler=connect4.reset),
-            mlpg.Button("Options", (MENU_WIDTH * (2 / 3), MENU_HEIGHT * (1 / 3)), mlpg.LIGHT_GRAY,
+            mlpg.Button("Options", (MENU_WIDTH * (2 / 3), MENU_HEIGHT * (1 / 3)), self.colours['button'],
                         handler=options.main),
-            mlpg.Button("Switch", (MENU_WIDTH * (1 / 3), MENU_HEIGHT * (2 / 3)), mlpg.LIGHT_GRAY,
-                        handler=connect4.switchPlayer),
-            mlpg.Button("QUIT", (MENU_WIDTH * (2 / 3), MENU_HEIGHT * (2 / 3)), mlpg.LIGHT_GRAY,
+            mlpg.Button("Null", (MENU_WIDTH * (1 / 3), MENU_HEIGHT * (2 / 3)), self.colours['button']),
+            mlpg.Button("QUIT", (MENU_WIDTH * (2 / 3), MENU_HEIGHT * (2 / 3)), self.colours['button'],
                         handler=close)]
 
         self.update(kwargs=kwargs)
@@ -265,14 +280,13 @@ class Menu:
         if len(args) == 2:
             for button in self.buttons:
                 button.update(args[0], args[1], origin=(GAME_PANEL[0], ADDON_PANEL[1] - MENU_HEIGHT))
+
         if 'kwargs' in kwargs:
             kwargs = kwargs['kwargs']
-        if 'dark_mode' in kwargs:
-            text_colour = mlpg.BLACK if not kwargs['dark_mode'] else mlpg.LIGHT_GRAY
-            colour = mlpg.LIGHT_GRAY if not kwargs['dark_mode'] else mlpg.GRAY
-            self.colour['background'] = mlpg.WHITE if not dark_mode else mlpg.DARK_GRAY
-            for button in range(len(self.buttons)):
-                self.buttons[button].update(colour=colour, text_colour=text_colour)
+        if 'colour_theme' in kwargs:
+            self.colours = kwargs['colour_theme']
+            for button in self.buttons:
+                button.update(colour=self.colours['button'], text_colour=self.colours['text'])
 
     def draw(self, surface: Any) -> None:
         """
@@ -281,7 +295,7 @@ class Menu:
         :return:
             - None
         """
-        surface.fill(self.colour['background'])
+        surface.fill(self.colours['bg1'])
         for button in self.buttons:
             button.draw(surface)
 
@@ -297,11 +311,11 @@ class Options:
         Initiates the object with required values.
         :param kwargs: Any
         """
-        self.colour = {'background': mlpg.WHITE}
+        self.colours = getColourTheme()
 
         self.players = {}
-        self.buttons = {}
         self.group_buttons = {}
+        self.buttons = []
         self.messages = []
 
         self.generate()
@@ -313,35 +327,37 @@ class Options:
         :return:
             - None
         """
-        self.buttons = {'back': mlpg.Button("Back", (OPTION_WIDTH * (2 / 5), OPTION_HEIGHT * (5 / 6)),
-                                            mlpg.LIGHT_GRAY, handler=True),
-                        'quit': mlpg.Button("QUIT", (OPTION_WIDTH * (3 / 5), OPTION_HEIGHT * (5 / 6)),
-                                            mlpg.LIGHT_GRAY, handler=close)}
+        self.buttons = [mlpg.Button("Back", (OPTION_WIDTH * (2 / 5), OPTION_HEIGHT * (5 / 6)), self.colours['button'],
+                                    handler=True),
+                        mlpg.Button("QUIT", (OPTION_WIDTH * (3 / 5), OPTION_HEIGHT * (5 / 6)), self.colours['button'],
+                                    handler=close)]
         self.messages = []
 
         gbi = {}
         for player_key in range(connect4.MAX_PLAYERS):
             gbi[f"Player {player_key + 1}:"] = {'selected': players[player_key]['type'], 'options': PLAYER_TYPES}
-            button_states = [True if option == players[player_key]['difficulty'] else False for option in DIFFICULTY]
             self.group_buttons[f"Difficulty {player_key + 1}:"] = mlpg.ButtonGroup(DIFFICULTY,
                                                                                    (self.BOARDER + ((OPTION_WIDTH *
                                                                                                     (1 / 6)) + 520),
                                                                                     self.BOARDER + (player_key * 90)),
-                                                                                   mlpg.LIGHT_GRAY, mlpg.GREEN,
-                                                                                   button_states=button_states)
+                                                                                   self.colours,
+                                                                                   players[player_key]['difficulty'])
 
         gbi['Game Speed:'] = {'selected': game_speed, 'options': SPEEDS}
         gbi['Evolution Speed:'] = {'selected': evolution_speed, 'options': SPEEDS}
         gbi['Show Every:'] = {'selected': show_every, 'options': SHOW_EVERY}
         for group_key in gbi:
-            button_states = [True if option == gbi[group_key]['selected'] else False
-                             for option in gbi[group_key]['options']]
             self.group_buttons[group_key] = mlpg.ButtonGroup(gbi[group_key]['options'],
                                                              (self.BOARDER + (OPTION_WIDTH * (1 / 6) + 100),
                                                               self.BOARDER + (len(self.messages) * 90)),
-                                                             mlpg.LIGHT_GRAY, mlpg.GREEN, button_states=button_states)
+                                                             self.colours, gbi[group_key]['selected'])
             self.messages.append(mlpg.Message(group_key, (self.BOARDER + (OPTION_WIDTH * (1 / 6)),
-                                                          self.BOARDER + (len(self.messages) * 90)), align='mr'))
+                                                          self.BOARDER + (len(self.messages) * 90)),
+                                              self.colours['text'], align='mr'))
+        self.group_buttons[f"Colour Theme:"] = mlpg.ButtonGroup(COLOUR_THEMES,
+                                                                (self.BOARDER + ((OPTION_WIDTH * (1 / 6)) + 520),
+                                                                 self.BOARDER + ((len(self.messages) - 1) * 90)),
+                                                                self.colours, colour_theme)
 
     def update(self, mouse_pos: tuple = None, mouse_clicked: bool = False, **kwargs: Any) -> bool:
         """
@@ -352,10 +368,10 @@ class Options:
         :return:
             - continue - bool
         """
-        global players, game_speed, evolution_speed, max_fps, show_every, dark_mode
+        global players, game_speed, evolution_speed, max_fps, show_every, colour_theme
         if mouse_pos is not None:
-            for button_key in self.buttons:
-                action = self.buttons[button_key].update(mouse_pos, mouse_clicked)
+            for button in self.buttons:
+                action = button.update(mouse_pos, mouse_clicked, text_colour=self.colours['text'])
                 if action is not None:
                     return True
 
@@ -391,20 +407,6 @@ class Options:
         else:
             self.group_buttons['Difficulty 2:'].update(active=True)
 
-        if 'kwargs' in kwargs:
-            kwargs = kwargs['kwargs']
-        if 'dark_mode' in kwargs:
-            text_colour = mlpg.BLACK if not kwargs['dark_mode'] else mlpg.LIGHT_GRAY
-            colour = mlpg.LIGHT_GRAY if not kwargs['dark_mode'] else mlpg.GRAY
-            active_colour = mlpg.GREEN if not kwargs['dark_mode'] else mlpg.DARK_GREEN
-            self.colour['background'] = mlpg.WHITE if not dark_mode else mlpg.DARK_GRAY
-            for button in self.buttons:
-                self.buttons[button].update(colour=colour, text_colour=text_colour)
-            for group in self.group_buttons:
-                self.group_buttons[group].update(colour=colour, active_colour=active_colour, text_colour=text_colour)
-            for message in range(len(self.messages)):
-                self.messages[message].update(colour=text_colour)
-
         if mouse_pos is not None:
             for group in self.group_buttons:
                 button_key = self.group_buttons[group].update(mouse_pos, mouse_clicked)
@@ -427,6 +429,19 @@ class Options:
                         show_every = SHOW_EVERY[0]
                         if players[0]['type'] == PLAYER_TYPES[2] or players[1]['type'] == PLAYER_TYPES[2]:
                             show_every = SHOW_EVERY[button_key]
+                    elif group == 'Colour Theme:':
+                        colour_theme = COLOUR_THEMES[button_key]
+                        self.colours = getColourTheme()
+                        for group_key in self.group_buttons:
+                            self.group_buttons[group_key].update(colours=self.colours)
+                        for button in self.buttons:
+                            button.update(colour=self.colours['button'], text_colour=self.colours['text'])
+                        for message in self.messages:
+                            message.update(colour=self.colours['text'])
+                        # connect4.update(colours=self.colours)
+                        network.update(colour_theme=self.colours)
+                        info.update(colour_theme=self.colours)
+                        menu.update(colour_theme=self.colours)
 
                     max_fps = max(FPS, max(game_speed, evolution_speed))
 
@@ -437,13 +452,13 @@ class Options:
             - None
         :return:
         """
-        surface.fill(self.colour['background'])
+        surface.fill(self.colours['bg1'])
         for message in self.messages:
             message.draw(surface)
         for group in self.group_buttons:
             self.group_buttons[group].draw(surface)
-        for button_keys in self.buttons:
-            self.buttons[button_keys].draw(surface)
+        for button in self.buttons:
+            button.draw(surface)
 
     def main(self) -> bool:
         """
@@ -533,7 +548,7 @@ def main() -> None:
                     if not connect4.match:
                         frame_count = 1
             else:
-                if frame_count >= max_fps / speed:
+                if not display or not show or frame_count >= max_fps / speed:
                     frame_count = 1
 
                     current_genome = None
@@ -553,7 +568,7 @@ def main() -> None:
                         info.update(current_player['neat'].getInfo())
 
         if not connect4.match:
-            if frame_count >= max_fps / speed:
+            if not display or not show or frame_count >= max_fps / speed:
                 fitness = connect4.fitnessEvaluation()
                 gen_str = 'Generation: 1 - %d, 2 - %d'
                 gens = [0, 0]

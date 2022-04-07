@@ -5,8 +5,8 @@ import pygame as pg
 import mattslib as ml
 import mattslib.pygame as mlpg
 
-__version__ = '1.1.2'
-__date__ = '5/04/2022'
+__version__ = '1.1.3'
+__date__ = '7/04/2022'
 
 
 class GameBoard:
@@ -32,9 +32,9 @@ class GameBoard:
 
         self.active = True
         self.visible = True
-        self.colour = {'background': mlpg.BLUE}
+        self.colour = {'bg3': mlpg.BLUE}
 
-        self.board_background = mlpg.Rect((self.game_width / 2, self.game_height / 2), self.colour['background'],
+        self.board_background = mlpg.Rect((self.game_width / 2, self.game_height / 2), self.colour['bg3'],
                                           [self.game_width - (self.BOARDER * 2), self.game_height - (self.BOARDER * 2)])
         self.player_text = mlpg.Message('', (self.game_width / 2, 60), size=40)
 
@@ -69,23 +69,23 @@ class GameBoard:
                 self.game_board[move[0]][move[1]].update(piece=kwargs['player'])
             if 'highlight_colour' in kwargs:
                 self.game_board[move[0]][move[1]].update(highlight_colour=kwargs['highlight_colour'])
-        if 'dark_mode' in kwargs:
-            if not kwargs['dark_mode']:
-                self.colour['background'] = mlpg.BLUE
-                colours = {-1: mlpg.WHITE, 0: mlpg.RED, 1: mlpg.YELLOW}
-                self.player_text.update(colour=mlpg.BLACK)
-                for label in range(len(self.column_labels)):
-                    self.column_labels[label].update(colour=mlpg.BLACK)
-            else:
-                self.colour['background'] = mlpg.DARK_BLUE
+        if 'mode' in kwargs:
+            if 'Dark' in kwargs['mode']:
+                self.colour['bg3'] = mlpg.DARK_BLUE
                 colours = {-1: mlpg.LIGHT_GRAY, 0: mlpg.DARK_RED, 1: mlpg.DARK_YELLOW}
                 self.player_text.update(colour=mlpg.LIGHT_GRAY)
                 for label in range(len(self.column_labels)):
                     self.column_labels[label].update(colour=mlpg.LIGHT_GRAY)
+            else:
+                self.colour['bg3'] = mlpg.BLUE
+                colours = {-1: mlpg.WHITE, 0: mlpg.RED, 1: mlpg.YELLOW}
+                self.player_text.update(colour=mlpg.BLACK)
+                for label in range(len(self.column_labels)):
+                    self.column_labels[label].update(colour=mlpg.BLACK)
             for h in range(len(self.game_board)):
                 for j in range(len(self.game_board[h])):
                     self.game_board[h][j].update(colours=colours)
-            self.board_background.update(colour=self.colour['background'])
+            self.board_background.update(colour=self.colour['bg3'])
 
     def draw(self, surface: Any) -> None:
         """
@@ -94,7 +94,7 @@ class GameBoard:
         :return:
             - None
         """
-        surface.fill(mlpg.changeColour(self.colour['background'], -70))
+        surface.fill(mlpg.changeColour(self.colour['bg3'], -70))
         self.board_background.draw(surface)
         self.player_text.draw(surface)
         for row in self.game_board:
@@ -192,9 +192,7 @@ class Network:
 
         self.active = True
         self.visible = True
-        self.colour = {'background': mlpg.WHITE,
-                       'input': mlpg.BLUE, 'output': mlpg.RED, 'hidden': mlpg.BLACK,
-                       'active': mlpg.GREEN, 'deactivated': mlpg.RED}
+        self.colours = {}
         self.network = {}
         self.radius = 5
 
@@ -224,10 +222,10 @@ class Network:
                 node_type = current_genome.nodes[node_index].layer_type
                 pos = (int(self.BOARDER + width * (d / (len(node_depths) - 1))),
                        int(self.BOARDER + height * ((1/2) if nodes_in_depth <= 1 else (i / (nodes_in_depth - 1)))))
-                self.network[node_index] = {'pos': pos, 'colour': self.colour[node_type], 'connections': []}
+                self.network[node_index] = {'pos': pos, 'colour': self.colours[node_type], 'connections': []}
 
         for pos in connections:
-            colour = self.colour['active'] if connections[pos].active else self.colour['deactivated']
+            colour = self.colours['active'] if connections[pos].active else self.colours['deactivated']
             connection = {'start': self.network[pos[0]]['pos'], 'end': self.network[pos[1]]['pos'], 'colour': colour,
                           'thickness': int(max(3, min(abs(connections[pos].weight), 1)))}
             self.network[pos[0]]['connections'].append(connection)
@@ -241,15 +239,8 @@ class Network:
         """
         if 'kwargs' in kwargs:
             kwargs = kwargs['kwargs']
-        if 'dark_mode' in kwargs:
-            if not kwargs['dark_mode']:
-                self.colour = {'background': mlpg.WHITE,
-                               'input': mlpg.BLUE, 'output': mlpg.RED, 'hidden': mlpg.BLACK,
-                               'active': mlpg.GREEN, 'deactivated': mlpg.RED}
-            else:
-                self.colour = {'background': mlpg.DARK_GRAY,
-                               'input': mlpg.BLUE, 'output': mlpg.RED, 'hidden': mlpg.LIGHT_GRAY,
-                               'active': mlpg.DARK_GREEN, 'deactivated': mlpg.DARK_RED}
+        if 'colour_theme' in kwargs:
+            self.colours = kwargs['colour_theme']
 
     def draw(self, surface: Any) -> None:
         """
@@ -258,7 +249,7 @@ class Network:
         :return:
             - None
         """
-        surface.fill(self.colour['background'])
+        surface.fill(self.colours['bg1'])
         for node in self.network:
             for connection in self.network[node]['connections']:
                 pg.draw.line(surface, connection['colour'], connection['start'], connection['end'],
@@ -284,7 +275,7 @@ class Info:
 
         self.active = True
         self.visible = True
-        self.colour = {'background': mlpg.LIGHT_GRAY}
+        self.colours = {}
 
         self.header = {}
 
@@ -316,13 +307,12 @@ class Info:
 
         if 'kwargs' in kwargs:
             kwargs = kwargs['kwargs']
-        if 'dark_mode' in kwargs:
-            self.colour['background'] = mlpg.LIGHT_GRAY if not kwargs['dark_mode'] else mlpg.GRAY
-            colour = mlpg.BLACK if not kwargs['dark_mode'] else mlpg.LIGHT_GRAY
+        if 'colour_theme' in kwargs:
+            self.colours = kwargs['colour_theme']
             for message in self.header:
-                self.header[message].update(colour=colour)
+                self.header[message].update(colour=self.colours['text'])
             for message in self.data:
-                self.data[message].update(colour=colour)
+                self.data[message].update(colour=self.colours['text'])
 
     def draw(self, surface: Any) -> None:
         """
@@ -332,7 +322,7 @@ class Info:
             - None
         """
         if self.visible:
-            surface.fill(self.colour['background'])
+            surface.fill(self.colours['bg2'])
             for text_key in self.header:
                 self.header[text_key].draw(surface)
 

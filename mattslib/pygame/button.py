@@ -6,30 +6,11 @@ import mattslib.pygame as mlpg
 from .message import Message
 from .shape import Rect, Circle
 
-__version__ = '1.2.2'
-__date__ = '5/04/2022'
+__version__ = '1.2.3'
+__date__ = '7/04/2022'
 
 
-def changeColour(colour: list, change_by: Any) -> list:
-    """
-    Changes the given colour with value, the clamps the colour ranges.
-    :param colour: list[int]
-    :param change_by: Any
-    :return:
-        - new_colour - list[int]
-    """
-    if isinstance(change_by, int):
-        new_colour = [colour[i] + change_by for i in range(len(colour))]
-    elif isinstance(change_by, list):
-        new_colour = [colour[i] + change_by[i] for i in range(len(colour))]
-    else:
-        return colour
-    for i in range(len(colour)):
-        new_colour[i] = 0 if new_colour[i] < 0 else 255 if new_colour[i] > 255 else new_colour[i]
-    return new_colour
-
-
-class Button:
+class Button(object):
     """
     Button is an object that creates and draws interactive buttons for
     the user to use.
@@ -49,7 +30,7 @@ class Button:
         self.align = align
         self.dims = dims
 
-        self.selected = False
+        self.mouse_over = False
         self.active = True
         self.show = True
 
@@ -107,21 +88,21 @@ class Button:
             self.show = kwargs['show']
 
         if mouse_pos is not None and self.active and self.show:
-            self.selected = self.button_rect.collide(mouse_pos, origin=origin)
-            if self.selected and mouse_clicked:
+            self.mouse_over = self.button_rect.collide(mouse_pos, origin=origin)
+            if self.mouse_over and mouse_clicked:
                 if callable(self.handler):
                     return self.handler()
                 return self.handler if self.handler is not None else True
 
-        if self.active and self.selected:
-            colour = changeColour(self.colour, 40)
+        if self.active and self.mouse_over:
+            colour = mlpg.changeColour(self.colour, 40)
             highlight = self.colour
         else:
             colour = self.colour
-            highlight = changeColour(self.colour, -40)
+            highlight = mlpg.changeColour(self.colour, -40)
             if not self.active:
-                colour = changeColour(colour, -50)
-                highlight = changeColour(colour, -50)
+                colour = mlpg.changeColour(colour, -50)
+                highlight = mlpg.changeColour(colour, -50)
 
         self.button_rect.update(colour=colour)
         self.button_boarder.update(colour=highlight)
@@ -140,38 +121,34 @@ class Button:
             self.message.draw(surface)
 
 
-class ButtonGroup:
+class ButtonGroup(object):
     """
     Forms a group of buttons, with active and selected states.
     """
 
     PADDING = 40
 
-    def __init__(self, *args: Any, align: str = '', single_active: bool = True, button_states: list = None):
+    def __init__(self, *args: Any, align: str = ''):
         """
         Initiates the button group with given values.
         :param args: Any
         :param align: str
-        :param single_active: bool
         :param button_states: list[bool]
         """
-        self.texts = args[0]
+        self.options = args[0]
         self.pos = args[1]
-        self.colour = args[2]
-        self.active_colour = args[3]
+        self.colours = args[2]
+        self.selected = args[3]
+
         self.align = align
 
         self.active = True
         self.show = True
 
-        self.single_active = single_active
-        self.buttons = {}
-        self.button_states = button_states if button_states is not None else [False for _ in range(len(self.texts))]
-        for i, text in enumerate(self.texts):
-            colour = self.active_colour if self.button_states[i] else self.colour
-            self.buttons[i] = Button(text, (self.pos[0] + (i * (self.PADDING + 100)), self.pos[1]), colour,
-                                     align=self.align)
-
+        self.buttons = []
+        for i, text in enumerate(self.options):
+            self.buttons.append(Button(text, (self.pos[0] + (i * (self.PADDING + 100)), self.pos[1]),
+                                       self.colours['button'], align=self.align))
         self.update()
 
     def update(self, *args: Any, **kwargs: Any) -> int:
@@ -189,38 +166,30 @@ class ButtonGroup:
 
         origin = kwargs['origin'] if 'origin' in kwargs else (0, 0)
 
-        if 'colour' in kwargs:
-            self.colour = kwargs['colour']
-            for button_key in self.buttons:
-                self.buttons[button_key].update(colour=self.colour)
-        if 'text_colour' in kwargs:
-            for button_key in self.buttons:
-                self.buttons[button_key].update(text_colour=kwargs['text_colour'])
-        if 'active_colour' in kwargs:
-            self.active_colour = kwargs['active_colour']
-            for button_key in self.buttons:
-                if self.button_states[button_key]:
-                    self.buttons[button_key].update(colour=self.active_colour)
-        if 'button_states' in kwargs:
-            self.button_states = kwargs['button_states']
+        if 'colours' in kwargs:
+            self.colours = kwargs['colours']
         if 'active' in kwargs:
             self.active = kwargs['active']
-            for button_key in self.buttons:
-                self.buttons[button_key].update(active=self.active)
+            for button in self.buttons:
+                button.update(active=self.active)
         if 'show' in kwargs:
             self.show = kwargs['show']
-            for button_key in self.buttons:
-                self.buttons[button_key].update(show=self.show)
+            for button in self.buttons:
+                button.update(show=self.show)
+
+        for button_key, button in enumerate(self.buttons):
+            button.update(text_colour=self.colours['text'])
+            button.update(colour=self.colours['button'])
+            if self.options[button_key] == self.selected:
+                button.update(colour=self.colours['selected'])
 
         if mouse_pos is not None and self.active:
-            for button_key in self.buttons:
-                colour = self.active_colour if self.button_states[button_key] else self.colour
-                action = self.buttons[button_key].update(mouse_pos, mouse_clicked, origin=origin, colour=colour)
+            for button_key, button in enumerate(self.buttons):
+                action = button.update(mouse_pos, mouse_clicked, origin=origin)
                 if action is not None:
-                    if self.single_active:
-                        self.button_states = [False for _ in range(len(self.buttons))]
-                        self.button_states[button_key] = True
-                        return button_key
+                    self.selected = self.options[button_key]
+                    self.update()
+                    return button_key
 
     def draw(self, surface: Any) -> None:
         """
@@ -229,5 +198,5 @@ class ButtonGroup:
         :return:
             - None
         """
-        for button_key in self.buttons:
-            self.buttons[button_key].draw(surface)
+        for button in self.buttons:
+            button.draw(surface)
