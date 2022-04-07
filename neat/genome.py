@@ -7,8 +7,8 @@ from .gene import Node, Connection
 
 from mattslib.dict import getKeyByWeights
 
-__version__ = '1.4.2'
-__date__ = '23/03/2022'
+__version__ = '1.4.3'
+__date__ = '7/04/2022'
 
 
 class Genome(object):
@@ -89,7 +89,7 @@ class Genome(object):
 
     def mutate(self, probabilities: dict) -> None:
         """
-        Mutates a gene and a genome attribute using mutation probabilities.
+        Mutates a genomes gene, using given mutation probabilities.
         :param probabilities: dict[str: Any]
         :return:
             - None
@@ -98,35 +98,32 @@ class Genome(object):
         node_types = self.getNodeByType()
         random_number = ((self.HIGH - self.LOW) * random.random() + self.LOW)
 
-        mutate_gene = getKeyByWeights(probabilities['gene'])
+        mutation = getKeyByWeights(probabilities)
         node = random.choice(node_types[self.LAYER_TYPES[1]] + node_types[self.LAYER_TYPES[2]])
-        if 'node' in mutate_gene:
-            if 'activation' in mutate_gene:
+        if 'node' in mutation:
+            if 'activation' in mutation:
                 self.nodes[node].activation = getActivation(random.choice(self.activations))
-            elif 'bias' in mutate_gene:
-                if 'set' in mutate_gene:
+            elif 'bias' in mutation:
+                if 'set' in mutation:
                     self.nodes[node].bias = random_number
-                elif 'adjust' in mutate_gene:
+                elif 'adjust' in mutation:
                     self.nodes[node].bias += random_number
-        if 'connection' in mutate_gene:
+            elif 'add' in mutation:
+                self.addNode()
+        elif 'connection' in mutation:
             pos = random.choice(list(self.connections.keys()))
-            if 'active' in mutate_gene:
+            if 'active' in mutation:
                 self.connections[pos].active = not self.connections[pos].active
-            if 'weight' in mutate_gene:
-                if 'set' in mutate_gene:
+            elif 'weight' in mutation:
+                if 'set' in mutation:
                     self.connections[pos].weight = random_number
-                elif 'adjust' in mutate_gene:
+                elif 'adjust' in mutation:
                     self.connections[pos].weight += random_number
-
-        mutate_genome = getKeyByWeights(probabilities['genome'])
-        if mutate_genome == 'activation':
+            elif 'add' in mutation:
+                self.addConnection(self.pair(node_types[self.LAYER_TYPES[0]], node_types[self.LAYER_TYPES[1]],
+                                             node_types[self.LAYER_TYPES[2]]), random_number)
+        elif 'activation' in mutation:
             self.activation = getActivation(random.choice(self.activations))
-        elif mutate_genome == 'node':
-            self.addNode()
-        elif mutate_genome == 'connection':
-            self.addConnection(self.pair(node_types[self.LAYER_TYPES[0]], node_types[self.LAYER_TYPES[1]],
-                                         node_types[self.LAYER_TYPES[2]]), random_number)
-
         self.reset()
 
     def reset(self) -> None:
