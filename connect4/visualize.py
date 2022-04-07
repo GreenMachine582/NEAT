@@ -32,9 +32,9 @@ class GameBoard:
 
         self.active = True
         self.visible = True
-        self.colour = {'bg3': mlpg.BLUE}
+        self.colours = {'bg3': mlpg.BLUE}
 
-        self.board_background = mlpg.Rect((self.game_width / 2, self.game_height / 2), self.colour['bg3'],
+        self.board_background = mlpg.Rect((self.game_width / 2, self.game_height / 2), self.colours['bg3'],
                                           [self.game_width - (self.BOARDER * 2), self.game_height - (self.BOARDER * 2)])
         self.player_text = mlpg.Message('', (self.game_width / 2, 60), size=40)
 
@@ -69,23 +69,15 @@ class GameBoard:
                 self.game_board[move[0]][move[1]].update(piece=kwargs['player'])
             if 'highlight_colour' in kwargs:
                 self.game_board[move[0]][move[1]].update(highlight_colour=kwargs['highlight_colour'])
-        if 'mode' in kwargs:
-            if 'Dark' in kwargs['mode']:
-                self.colour['bg3'] = mlpg.DARK_BLUE
-                colours = {-1: mlpg.LIGHT_GRAY, 0: mlpg.DARK_RED, 1: mlpg.DARK_YELLOW}
-                self.player_text.update(colour=mlpg.LIGHT_GRAY)
-                for label in range(len(self.column_labels)):
-                    self.column_labels[label].update(colour=mlpg.LIGHT_GRAY)
-            else:
-                self.colour['bg3'] = mlpg.BLUE
-                colours = {-1: mlpg.WHITE, 0: mlpg.RED, 1: mlpg.YELLOW}
-                self.player_text.update(colour=mlpg.BLACK)
-                for label in range(len(self.column_labels)):
-                    self.column_labels[label].update(colour=mlpg.BLACK)
-            for h in range(len(self.game_board)):
-                for j in range(len(self.game_board[h])):
-                    self.game_board[h][j].update(colours=colours)
-            self.board_background.update(colour=self.colour['bg3'])
+        if 'colour_theme' in kwargs:
+            self.colours = kwargs['colour_theme']
+            self.player_text.update(colour=self.colours['text'])
+            for label in self.column_labels:
+                label.update(colour=self.colours['text'])
+            for row in self.game_board:
+                for piece in row:
+                    piece.update(colour_theme=self.colours)
+            self.board_background.update(colour=self.colours['bg3'])
 
     def draw(self, surface: Any) -> None:
         """
@@ -94,7 +86,7 @@ class GameBoard:
         :return:
             - None
         """
-        surface.fill(mlpg.changeColour(self.colour['bg3'], -70))
+        surface.fill(mlpg.changeColour(self.colours['bg3'], -70))
         self.board_background.draw(surface)
         self.player_text.draw(surface)
         for row in self.game_board:
@@ -145,14 +137,14 @@ class Piece:
         :return:
             - None
         """
-        if 'colours' in kwargs:
-            self.colours = kwargs['colours']
-            self.circle.update(colour=self.colours[self.piece])
-            self.circle_boarder.update(colour=mlpg.changeColour(self.colours[self.piece], -70))
+        if 'colour_theme' in kwargs:
+            self.colours = kwargs['colour_theme']
+            self.circle.update(colour=self.colours[str(self.piece)])
+            self.circle_boarder.update(colour=mlpg.changeColour(self.colours[str(self.piece)], -70))
         if 'piece' in kwargs:
             self.piece = kwargs['piece']
-            self.circle.update(colour=self.colours[self.piece])
-            self.circle_boarder.update(colour=mlpg.changeColour(self.colours[self.piece], -70))
+            self.circle.update(colour=self.colours[str(self.piece)])
+            self.circle_boarder.update(colour=mlpg.changeColour(self.colours[str(self.piece)], -70))
         if 'highlight_colour' in kwargs:
             self.circle_boarder.update(colour=mlpg.changeColour(kwargs['highlight_colour'], -70))
         if 'active' in kwargs:

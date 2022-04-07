@@ -98,12 +98,14 @@ def getSpeedShow() -> tuple:
 def getColourTheme() -> dict:
     if colour_theme == COLOUR_THEMES[1]:
         colours = {'text': mlpg.LIGHT_GRAY, 'button': mlpg.GRAY,
-                   'selected': mlpg.DARK_GREEN, 'bg1': mlpg.DARK_GRAY, 'bg2': mlpg.GRAY,
+                   'selected': mlpg.DARK_GREEN, 'bg1': mlpg.DARK_GRAY, 'bg2': mlpg.GRAY, 'bg3': mlpg.DARK_BLUE,
+                   '-1': mlpg.LIGHT_GRAY, '0': mlpg.DARK_RED, '1': mlpg.DARK_YELLOW,
                    'input': mlpg.DARK_BLUE, 'output': mlpg.DARK_RED, 'hidden': mlpg.LIGHT_GRAY,
                    'active': mlpg.DARK_GREEN, 'deactivated': mlpg.DARK_RED}
     else:
         colours = {'text': mlpg.BLACK, 'button': mlpg.LIGHT_GRAY,
-                   'selected': mlpg.GREEN, 'bg1': mlpg.WHITE, 'bg2': mlpg.LIGHT_GRAY,
+                   'selected': mlpg.GREEN, 'bg1': mlpg.WHITE, 'bg2': mlpg.LIGHT_GRAY, 'bg3': mlpg.BLUE,
+                   '-1': mlpg.WHITE, '0': mlpg.RED, '1': mlpg.YELLOW,
                    'input': mlpg.BLUE, 'output': mlpg.RED, 'hidden': mlpg.BLACK,
                    'active': mlpg.GREEN, 'deactivated': mlpg.RED}
     return colours
@@ -359,12 +361,11 @@ class Options:
                                                                  self.BOARDER + ((len(self.messages) - 1) * 90)),
                                                                 self.colours, colour_theme)
 
-    def update(self, mouse_pos: tuple = None, mouse_clicked: bool = False, **kwargs: Any) -> bool:
+    def update(self, mouse_pos: tuple = None, mouse_clicked: bool = False) -> bool:
         """
         Updates the option buttons, global variables and other related attributes.
         :param mouse_pos: tuple[int, int]
         :param mouse_clicked: bool
-        :param kwargs: Any
         :return:
             - continue - bool
         """
@@ -438,7 +439,7 @@ class Options:
                             button.update(colour=self.colours['button'], text_colour=self.colours['text'])
                         for message in self.messages:
                             message.update(colour=self.colours['text'])
-                        # connect4.update(colours=self.colours)
+                        connect4.game_board.update(colour_theme=self.colours)
                         network.update(colour_theme=self.colours)
                         info.update(colour_theme=self.colours)
                         menu.update(colour_theme=self.colours)
