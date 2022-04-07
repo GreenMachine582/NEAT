@@ -4,11 +4,11 @@ import math
 
 import pygame as pg
 
-__version__ = '1.2.1'
-__date__ = '20/03/2022'
+__version__ = '1.2.2'
+__date__ = '7/04/2022'
 
 
-class Rect:
+class Rect(object):
     """
     Rect is an object that draws, updates and checks collisions with
     given environment.
@@ -87,7 +87,7 @@ class Rect:
         return False
 
 
-class Circle:
+class Circle(object):
     """
     Circle is an object that draws, updates and checks collisions with
     given environment.
