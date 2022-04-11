@@ -1,7 +1,7 @@
 import logging
 
-__version__ = '1.2.1'
-__date__ = '19/03/2022'
+__version__ = '1.2.2'
+__date__ = '11/04/2022'
 
 
 def condense(array: list, condensed_array: list = None, depth: int = 0, max_depth: int = 0) -> list:
@@ -50,3 +50,18 @@ def findMaxMin(array: list = None) -> dict:
         return max_min
     except Exception as e:
         logging.exception(e)
+
+
+def difference(array_a: list, array_b: list) -> list:
+    """
+    Calculates the differences between two given values.
+    :param array_a: list[int | float]
+    :param array_b: list[int | float]
+    :return:
+        - differences - list[int | float]
+    """
+    differences = []
+    if len(array_a) == len(array_b):
+        for i in zip(array_a, array_b):
+            differences.append(i[0] - i[1])
+    return differences
