@@ -16,8 +16,7 @@
             "sigmoid",
             "binaryStep"
         ],
-        "max_depth": 5,
-        "max_backtrack": 1
+        "max_depth": 5
     },
     "max_fitness": 0,
     "max_generations": 0,
@@ -40,10 +39,12 @@
         "node_bias_adjust": 0.3,
         "node_bias_set": 0.1,
         "connection_active": 0.01,
-        "connection_weight_adjust": 0.6,
+        "connection_weight_adjust": 0.5,
         "connection_weight_set": 0.2,
         "activation": 0.01,
         "add_node": 0.1,
-        "add_connection": 0.2
+        "remove_node": 0.005,
+        "add_connection": 0.2,
+        "remove_connection": 0.01
     }
 }

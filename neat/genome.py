@@ -5,10 +5,11 @@ import random
 from .activations import getActivation
 from .gene import Node, Connection
 
+import mattslib as ml
 from mattslib.dict import getKeyByWeights
 
-__version__ = '1.4.3'
-__date__ = '7/04/2022'
+__version__ = '1.4.4'
+__date__ = '11/04/2022'
 
 
 class Genome(object):
@@ -42,7 +43,6 @@ class Genome(object):
         self.adjusted_fitness = 0
 
         self.max_depth = node_info['max_depth']
-        self.max_backtrack = node_info['max_backtrack']
 
         self.generate()
 
@@ -53,14 +53,14 @@ class Genome(object):
         :return:
             - None
         """
-        for n in range(self.total_nodes):
-            layer_type = self.LAYER_TYPES[0] if n < self.inputs else self.LAYER_TYPES[2]
-            self.nodes[n] = Node(layer_type, self.activation)
-            self.nodes[n].depth = 0 if layer_type == self.LAYER_TYPES[0] else self.max_depth
+        for node_key in range(self.total_nodes):
+            layer_type = self.LAYER_TYPES[0] if node_key < self.inputs else self.LAYER_TYPES[2]
+            self.nodes[node_key] = Node(layer_type, self.activation)
+            self.nodes[node_key].depth = 0 if layer_type == self.LAYER_TYPES[0] else self.max_depth
 
-        for i in range(self.inputs):
-            for j in range(self.inputs, self.initial_nodes):
-                self.addConnection((i, j), ((self.HIGH - self.LOW) * random.random() + self.LOW))
+        for input_node in range(self.inputs):
+            for output_node in range(self.inputs, self.initial_nodes):
+                self.addConnection((input_node, output_node), ((self.HIGH - self.LOW) * random.random() + self.LOW))
 
     def forward(self, inputs: list) -> list:
         """
@@ -69,21 +69,21 @@ class Genome(object):
         :return:
             - output - list[int | float]
         """
-        for i in range(self.inputs):
-            self.nodes[i].output = inputs[i]
+        for node_key in range(self.inputs):
+            self.nodes[node_key].output = inputs[node_key]
 
-        nodes = {n: [] for n in range(self.total_nodes)}
+        nodes = {node_key: [] for node_key in range(self.total_nodes)}
 
         for pos in self.connections:
             if self.connections[pos].active:
                 nodes[pos[1]].append(pos[0])
 
         genome_nodes = self.getNodeByType(self.LAYER_TYPES[-2:])
-        for j in genome_nodes[self.LAYER_TYPES[1]] + genome_nodes[self.LAYER_TYPES[2]]:
+        for node_out in genome_nodes[self.LAYER_TYPES[1]] + genome_nodes[self.LAYER_TYPES[2]]:
             node_sum = 0
-            for i in nodes[j]:
-                node_sum += self.connections[(i, j)].weight * self.nodes[i].output
-            node = self.nodes[j]
+            for node_in in nodes[node_out]:
+                node_sum += self.connections[(node_in, node_out)].weight * self.nodes[node_in].output
+            node = self.nodes[node_out]
             node.output = node.activation(node_sum + node.bias)
         return [self.nodes[n].output for n in range(self.inputs, self.initial_nodes)]
 
@@ -94,22 +94,23 @@ class Genome(object):
         :return:
             - None
         """
-        self.addActiveConnection()
         node_types = self.getNodeByType()
         random_number = ((self.HIGH - self.LOW) * random.random() + self.LOW)
 
         mutation = getKeyByWeights(probabilities)
-        node = random.choice(node_types[self.LAYER_TYPES[1]] + node_types[self.LAYER_TYPES[2]])
+        node_key = random.choice(node_types[self.LAYER_TYPES[1]] + node_types[self.LAYER_TYPES[2]])
         if 'node' in mutation:
             if 'activation' in mutation:
-                self.nodes[node].activation = getActivation(random.choice(self.activations))
+                self.nodes[node_key].activation = getActivation(random.choice(self.activations))
             elif 'bias' in mutation:
                 if 'set' in mutation:
-                    self.nodes[node].bias = random_number
+                    self.nodes[node_key].bias = random_number
                 elif 'adjust' in mutation:
-                    self.nodes[node].bias += random_number
+                    self.nodes[node_key].bias += random_number
             elif 'add' in mutation:
                 self.addNode()
+            elif 'remove' in mutation:
+                self.removeNode(node_key)
         elif 'connection' in mutation:
             pos = random.choice(list(self.connections.keys()))
             if 'active' in mutation:
@@ -122,6 +123,8 @@ class Genome(object):
             elif 'add' in mutation:
                 self.addConnection(self.pair(node_types[self.LAYER_TYPES[0]], node_types[self.LAYER_TYPES[1]],
                                              node_types[self.LAYER_TYPES[2]]), random_number)
+            elif 'remove' in mutation:
+                self.removeConnection()
         elif 'activation' in mutation:
             self.activation = getActivation(random.choice(self.activations))
         self.reset()
@@ -132,57 +135,92 @@ class Genome(object):
         :return:
             - None
         """
-        for node in range(self.total_nodes):
-            self.nodes[node].output = 0
+        for node_key in range(self.total_nodes):
+            self.nodes[node_key].output = 0
         self.fitness = 0
-
-    def addActiveConnection(self) -> None:
-        """
-        Activates one of the deactivated connections.
-        :return:
-            - None
-        """
-        deactivated_connections = [pos for pos in self.connections if not self.connections[pos].active]
-        if len(deactivated_connections) == len(self.connections):
-            self.connections[random.choice(deactivated_connections)].active = True
 
     def addConnection(self, pos: tuple, weight: int | float) -> None:
         """
-        Adds or activates the connection between given nodes and checks backtrack.
+        Adds or activates the connection between given nodes.
         :param pos: tuple[int, int]
         :param weight: int | float
         :return:
             - None
         """
-        if pos in self.connections:
+        if self.nodes[pos[1]].depth < self.nodes[pos[0]].depth:
+            pos = pos[::-1]
+
+        if pos in self.connections:  # checks forward connections
             self.connections[pos].active = True
+        elif pos[::-1] in self.connections:  # checks side connections
+            self.connections[pos[::-1]].active = True
         else:
-            if self.nodes[pos[0]].depth > self.nodes[pos[1]].depth:
-                if self.nodes[pos[0]].backtrack < self.max_backtrack:
-                    self.nodes[pos[1]].backtrack += 1
-                else:
-                    pos = pos[::-1]
             self.connections[pos] = Connection(weight)
+
+    def removeConnection(self) -> None:
+        """
+        Removes an eligible connection form the network by weight pruning
+        with the optimal brain damage strategy.
+        :return:
+            - None
+        """
+        inputs = [round(random.random(), 3) for _ in range(self.inputs)]
+        outputs = self.forward(inputs)
+
+        eligible_connections = []
+        saliencies = {}
+        for pos in list(self.connections.keys()):
+            connected_from, connected_to = self.countConnected(pos)
+            if connected_from >= 2 and connected_to >= 2:
+                eligible_connections.append(pos)
+
+        for pos in eligible_connections:
+            self.connections[pos].active = False
+            saliency = ml.list.difference(outputs, self.forward(inputs))
+            saliencies[pos] = max([abs(i) for i in saliency])
+            self.connections[pos].active = True
+
+        if saliencies:
+            min_pos = min(saliencies, key=saliencies.get)
+            self.connections.pop(min_pos)
 
     def addNode(self) -> None:
         """
-        Adds a random node to the genome.
+        Adds a new node inbetween an active connection, then removes the previous connections.
         :return:
             - None
         """
         new_node = self.total_nodes
         self.nodes[new_node] = Node(self.LAYER_TYPES[1], self.activation)
-
         pos = random.choice(self.getActiveConnections())
-        connection = self.connections[pos]
-        connection.active = False
 
         depth = min(self.max_depth - 1, self.nodes[pos[0]].depth + 1)
 
         self.nodes[new_node].depth = depth
         self.total_nodes += 1
         self.addConnection((pos[0], new_node), 1.0)
-        self.addConnection((new_node, pos[1]), connection.weight)
+        self.addConnection((new_node, pos[1]), self.connections[pos].weight)
+        self.connections.pop(pos)
+
+    def removeNode(self, node_key: int) -> None:
+        """
+        Removes a node from genome if the surrounding connections are sufficient.
+        :param node_key: int
+        :return:
+            - None
+        """
+        connected_to, connected_from = self.getConnected(node_key)
+        for pos in connected_to:
+            if len(self.getConnected(pos)[1]) < 2:
+                return
+        for pos in connected_from:
+            if len(self.getConnected(pos)[0]) < 2:
+                return
+        self.nodes.pop(node_key)
+        self.total_nodes -= 1
+        for pos in list(self.connections.keys()):
+            if pos[0] == node_key or pos[1] == node_key:
+                self.connections.pop(pos)
 
     def pair(self, input_nodes: list, hidden_nodes: list, output_nodes: list) -> tuple:
         """
@@ -238,3 +276,32 @@ class Genome(object):
             - list[tuple[int, int]]
         """
         return [pos for pos in self.connections if self.connections[pos].active]
+
+    def countConnected(self, connection: tuple) -> tuple:
+        """
+        Counts the surrounding connections.
+        :param connection: tuple[int, int]
+        :return:
+            - connected_from, connected_to - tuple[int, int]
+        """
+        connected_from, connected_to = 0, 0
+        for pos in self.connections:
+            if connection[0] == pos[0]:
+                connected_from += 1
+            elif connection[1] == pos[1]:
+                connected_to += 1
+        return connected_from, connected_to
+
+    def getConnected(self, node_key: int) -> tuple:
+        """
+        :param node_key: int
+        :return:
+            - connected_to, connected_from - tuple[list[tuple[int, int]], list[tuple[int, int]]]
+        """
+        connected_to, connected_from = [], []
+        for pos in self.connections:
+            if node_key == pos[0]:
+                connected_from.append(pos)
+            elif node_key == pos[1]:
+                connected_to.append(pos)
+        return connected_to, connected_from

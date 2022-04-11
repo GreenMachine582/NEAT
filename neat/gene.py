@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-__version__ = '1.4.1'
-__date__ = '21/03/2022'
+__version__ = '1.4.2'
+__date__ = '11/04/2022'
 
 
 class Node(object):
@@ -19,7 +19,6 @@ class Node(object):
         self.depth = 0
         self.output = 0
         self.bias = 0
-        self.backtrack = 0
 
 
 class Connection(object):

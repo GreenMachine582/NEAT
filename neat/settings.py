@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from mattslib.file import read, write
 
-__version__ = '1.4.6'
-__date__ = '7/04/2022'
+__version__ = '1.4.7'
+__date__ = '11/04/2022'
 
 
 class Settings(object):
@@ -31,7 +31,7 @@ class Settings(object):
         self.node_info = {
             'activations': ['tanh'],
             'max_depth': 5,
-            'max_backtrack': 1,
+            'max_backtrack_depth': 1,
         }
 
         self.max_fitness = 0
@@ -57,7 +57,9 @@ class Settings(object):
             'connection_weight_set': 0.1,
             'activation': 0.01,
             'add_node': 0.04,
-            'add_connection': 0.09
+            'remove_node': 0.005,
+            'add_connection': 0.09,
+            'remove_connection': 0.01
         }
 
         if environment_dir:
