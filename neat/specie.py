@@ -9,8 +9,8 @@ from .genome import Genome
 from mattslib.dict import countOccurrence, sortIntoDict
 from mattslib.math_util import mean
 
-__version__ = '1.4.5'
-__date__ = '6/04/2022'
+__version__ = '1.4.6'
+__date__ = '11/04/2022'
 
 
 def genomicDistance(x_member: Genome, y_member: Genome, distance_weights: dict) -> float:
@@ -27,7 +27,6 @@ def genomicDistance(x_member: Genome, y_member: Genome, distance_weights: dict) 
     x_connections = list(x_member.connections)
     y_connections = list(y_member.connections)
     connections = countOccurrence(x_connections + y_connections)
-    matching_connections = [pos for pos in connections if connections[pos] == 2]
     disjoint_connections = [pos for pos in connections if connections[pos] == 1]
 
     connections_count = max(len(x_connections), len(y_connections))
@@ -36,10 +35,8 @@ def genomicDistance(x_member: Genome, y_member: Genome, distance_weights: dict) 
                                                     max(x_member.total_nodes, y_member.total_nodes))
     genomic_distance += distance_weights['connection'] * (len(disjoint_connections) / connections_count)
 
-    weight_diff = 0
-    for pos in matching_connections:
-        weight_diff += abs(x_member.connections[pos].weight - y_member.connections[pos].weight)
-    genomic_distance += distance_weights['weight'] * (weight_diff / len(matching_connections))
+    weight_diff = len(disjoint_connections)
+    genomic_distance += distance_weights['weight'] * (weight_diff / max(1, len(disjoint_connections)))
 
     nodes_count = min(x_member.total_nodes, y_member.total_nodes)
     activation_diff, bias_diff = 0, 0
