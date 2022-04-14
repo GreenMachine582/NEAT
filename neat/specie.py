@@ -9,8 +9,8 @@ from .genome import Genome
 from mattslib.dict import countOccurrence, sortIntoDict
 from mattslib.math_util import mean
 
-__version__ = '1.4.6'
-__date__ = '11/04/2022'
+__version__ = '1.4.7'
+__date__ = '13/04/2022'
 
 
 def genomicDistance(x_member: Genome, y_member: Genome, distance_weights: dict) -> float:
@@ -22,30 +22,26 @@ def genomicDistance(x_member: Genome, y_member: Genome, distance_weights: dict) 
     :return:
         - distance - float
     """
-    genomic_distance = 0
-
-    x_connections = list(x_member.connections)
-    y_connections = list(y_member.connections)
-    connections = countOccurrence(x_connections + y_connections)
-    disjoint_connections = [pos for pos in connections if connections[pos] == 1]
-
-    connections_count = max(len(x_connections), len(y_connections))
+    genomic_distance = 0.0
 
     genomic_distance += distance_weights['node'] * (abs(x_member.total_nodes - y_member.total_nodes) /
                                                     max(x_member.total_nodes, y_member.total_nodes))
-    genomic_distance += distance_weights['connection'] * (len(disjoint_connections) / connections_count)
+    genomic_distance += distance_weights['connection'] * (abs(x_member.total_connections - y_member.total_connections) /
+                                                          max(x_member.total_connections, y_member.total_connections))
 
-    weight_diff = len(disjoint_connections)
-    genomic_distance += distance_weights['weight'] * (weight_diff / max(1, len(disjoint_connections)))
+    weight_diff = 0
+    for pos in x_member.connections:
+        weight_diff += x_member.connections[pos].weight
+    for pos in y_member.connections:
+        weight_diff -= y_member.connections[pos].weight
+    genomic_distance += distance_weights['weight'] * abs(weight_diff)
 
-    nodes_count = min(x_member.total_nodes, y_member.total_nodes)
-    activation_diff, bias_diff = 0, 0
-    for node in range(nodes_count):
-        activation_diff += 0 if x_member.nodes[node].activation == y_member.nodes[node].activation else 1
-        bias_diff += abs(x_member.nodes[node].bias - y_member.nodes[node].bias)
-
-    genomic_distance += distance_weights['activation'] * (activation_diff / nodes_count)
-    genomic_distance += distance_weights['bias'] * (bias_diff / nodes_count)
+    bias_diff = 0
+    for node_key in x_member.nodes:
+        bias_diff += x_member.nodes[node_key].bias
+    for node_key in y_member.nodes:
+        bias_diff -= y_member.nodes[node_key].bias
+    genomic_distance += distance_weights['bias'] * abs(bias_diff)
     return round(genomic_distance, 7)
 
 
@@ -112,7 +108,7 @@ class Specie(object):
         ids = [member_key for member_key in range(len(self.members))]
         sorted_ids = sortIntoDict(ids, sort_with=self.getAllFitnesses())
 
-        sorted_fitness_keys = sorted(list(sorted_ids.keys()))
+        sorted_fitness_keys = sorted(list(sorted_ids))
         surviving_members = []
         for fitness_key in sorted_fitness_keys:
             for member_id in sorted_ids[fitness_key]:
