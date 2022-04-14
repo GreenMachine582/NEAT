@@ -33,7 +33,7 @@ ENVIRONMENT = 'connect4'
 PLAYER_TYPES = ['Human', 'Best', 'Train']
 DIFFICULTY = ['Medium', 'Hard']
 NEAT_INPUTS = {DIFFICULTY[0]: 2, DIFFICULTY[1]: 8}
-SPEEDS = [1, 2, 5, 100, 500]
+SPEEDS = [1, 2, 10, 100, 500]
 SHOW_EVERY = ['Genome', 'Generation', 'None']
 COLOUR_THEMES = ['Light', 'Dark']
 
@@ -94,7 +94,7 @@ def getSpeedShow() -> tuple:
             return evolution_speed, False
     return game_speed, True
 
-8
+
 def getColourTheme() -> dict:
     if colour_theme == COLOUR_THEMES[1]:
         colours = {'text': mlpg.LIGHT_GRAY, 'button': mlpg.GRAY,
@@ -207,10 +207,7 @@ def checkBest(player_key: int, match_range: int = 50, win_threshold: float = 0.1
     :return:
         - None
     """
-    temp_players = players[:]
-    temp_players[abs(player_key - 1)] = {'type': PLAYER_TYPES[1], 'difficulty': temp_players[player_key]['difficulty'],
-                                         'neat': None}
-    setup(temp_players)
+    setup(players)
     win_count = 0
     for _ in range(match_range):
         run = True

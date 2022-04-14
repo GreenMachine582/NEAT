@@ -33,7 +33,7 @@ ENVIRONMENT = 'connect4'
 PLAYER_TYPES = ['Human', 'Best', 'Train']
 DIFFICULTY = ['Medium', 'Hard']
 NEAT_INPUTS = {DIFFICULTY[0]: 2, DIFFICULTY[1]: 8}
-SPEEDS = [1, 2, 5, 100, 500]
+SPEEDS = [1, 2, 10, 100, 500]
 SHOW_EVERY = ['Genome', 'Generation', 'None']
 COLOUR_THEMES = ['Light', 'Dark']
 
@@ -44,8 +44,8 @@ MODEL_NAME = "%s_%s"
 
 
 # Globals - Defaults
-players = [{'type': PLAYER_TYPES[1], 'difficulty': DIFFICULTY[0], 'neat': None},
-           {'type': PLAYER_TYPES[1], 'difficulty': DIFFICULTY[1], 'neat': None}]
+players = [{'type': PLAYER_TYPES[1], 'difficulty': DIFFICULTY[1], 'neat': None},
+           {'type': PLAYER_TYPES[2], 'difficulty': DIFFICULTY[1], 'neat': None}]
 game_speed = SPEEDS[1]
 evolution_speed = SPEEDS[-1]
 max_fps = max(FPS, max(game_speed, evolution_speed))
@@ -197,7 +197,7 @@ def neatMove(player: dict, genome: Genome) -> int:
     return move[1]
 
 
-def checkBest(player_key: int, match_range: int = 50, win_threshold: float = 0.05) -> None:
+def checkBest(player_key: int, match_range: int = 50, win_threshold: float = 0.1) -> None:
     """
     Update the best neat for each difficulty depending on win rate with current
     trained neat.
@@ -207,10 +207,7 @@ def checkBest(player_key: int, match_range: int = 50, win_threshold: float = 0.0
     :return:
         - None
     """
-    temp_players = players[:]
-    temp_players[abs(player_key - 1)] = {'type': PLAYER_TYPES[1], 'difficulty': temp_players[player_key]['difficulty'],
-                                         'neat': None}
-    setup(temp_players)
+    setup(players)
     win_count = 0
     for _ in range(match_range):
         run = True
@@ -321,7 +318,7 @@ class Options:
         self.messages = []
 
         self.generate()
-        self.update(kwargs=kwargs)
+        self.update()
 
     def generate(self) -> None:
         """
