@@ -28,10 +28,10 @@ def genomicCrossover(x_member: Genome, y_member: Genome) -> Genome:
 
     # Copy eligible connections
     for pos in y_member.connections:
-        for connection in [pos, pos[::-1]]:
-            if connection[0] < child.total_nodes and connection[1] < child.total_nodes:
-                if child.nodes[connection[0]].depth < child.nodes[connection[1]].depth:
-                    child.connections[connection] = deepcopy(y_member.connections[pos])
+        if pos[0] < child.total_nodes and pos[1] < child.total_nodes:
+            connection = child.checkPair(pos)
+            if connection is not None:
+                child.connections[connection] = deepcopy(y_member.connections[pos])
 
     # Fill in remaining possible connections
     for pos in x_member.connections:

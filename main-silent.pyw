@@ -42,11 +42,10 @@ ENVIRONMENT_DIR = f"{ROOT_DIR}\\{ENVIRONMENT}"
 MODELS_DIR = f"{ENVIRONMENT_DIR}\\models\\"
 MODEL_NAME = "%s_%s"
 
-
 # Globals - Defaults
-players = [{'type': PLAYER_TYPES[1], 'difficulty': DIFFICULTY[1], 'neat': None},
-           {'type': PLAYER_TYPES[2], 'difficulty': DIFFICULTY[1], 'neat': None}]
-game_speed = SPEEDS[1]
+players = [{'type': PLAYER_TYPES[1], 'difficulty': DIFFICULTY[0], 'neat': None},
+           {'type': PLAYER_TYPES[1], 'difficulty': DIFFICULTY[1], 'neat': None}]
+game_speed = SPEEDS[2]
 evolution_speed = SPEEDS[-1]
 max_fps = max(FPS, max(game_speed, evolution_speed))
 show_every = SHOW_EVERY[1]

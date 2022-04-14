@@ -42,7 +42,6 @@ ENVIRONMENT_DIR = f"{ROOT_DIR}\\{ENVIRONMENT}"
 MODELS_DIR = f"{ENVIRONMENT_DIR}\\models\\"
 MODEL_NAME = "%s_%s"
 
-
 # Globals - Defaults
 players = [{'type': PLAYER_TYPES[1], 'difficulty': DIFFICULTY[0], 'neat': None},
            {'type': PLAYER_TYPES[2], 'difficulty': DIFFICULTY[0], 'neat': None}]
