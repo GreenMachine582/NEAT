@@ -9,8 +9,8 @@ from .specie import Specie, genomicDistance
 from mattslib.dict import countOccurrence, getKeyByWeights
 from mattslib.file import read, write
 
-__version__ = '1.4.7'
-__date__ = '6/04/2022'
+__version__ = '1.4.8'
+__date__ = '14/04/2022'
 
 
 def genomicCrossover(x_member: Genome, y_member: Genome) -> Genome:
@@ -22,36 +22,23 @@ def genomicCrossover(x_member: Genome, y_member: Genome) -> Genome:
         - child - Genome
     """
     child = Genome(x_member.inputs, x_member.outputs, x_member.node_info)
+    child.nodes = deepcopy(x_member.nodes)
+    child.total_nodes = x_member.total_nodes
+    child.connections = {}
 
-    connections = countOccurrence(list(x_member.connections) + list(y_member.connections))
-    matching_connections = [pos for pos in connections if connections[pos] == 2]
-    disjoint_connections = [pos for pos in connections if connections[pos] == 1]
+    # Copy eligible connections
+    for pos in y_member.connections:
+        for connection in [pos, pos[::-1]]:
+            if connection[0] < child.total_nodes and connection[1] < child.total_nodes:
+                if child.nodes[connection[0]].depth < child.nodes[connection[1]].depth:
+                    child.connections[connection] = deepcopy(y_member.connections[pos])
 
-    for pos in matching_connections:
-        child.connections[pos] = deepcopy(random.choice([x_member, y_member]).connections[pos])
+    # Fill in remaining possible connections
+    for pos in x_member.connections:
+        if pos not in list(child.connections):
+            child.connections[pos] = deepcopy(x_member.connections[pos])
 
-    members_fitnesses = {x_member: x_member.adjusted_fitness, y_member: y_member.adjusted_fitness}
-    leading_member = max(members_fitnesses, key=members_fitnesses.get)
-    for pos in list(leading_member.connections):
-        if pos in disjoint_connections:
-            child.connections[pos] = deepcopy(leading_member.connections[pos])
-
-    child.total_nodes = 0
-    for pos in child.connections:
-        child.total_nodes = max([child.total_nodes, pos[0], pos[1]])
-    child.total_nodes += 1
-
-    for node in range(child.total_nodes):
-        inherit_from = []
-        if node in x_member.nodes:
-            inherit_from.append(x_member)
-        if node in y_member.nodes:
-            inherit_from.append(y_member)
-
-        if leading_member in inherit_from:
-            child.nodes[node] = deepcopy(leading_member.nodes[node])
-        else:
-            child.nodes[node] = deepcopy(inherit_from[0].nodes[node])
+    child.total_connections = len(child.connections)
     child.reset()
     return child
 
@@ -95,6 +82,7 @@ class NEAT(object):
         self.outputs = outputs
         self.population = population
 
+        # Creates and specifies the populace
         for _ in range(self.population):
             genome = Genome(self.inputs, self.outputs, self.settings.node_info)
             self.classifyGenome(genome)
@@ -133,7 +121,7 @@ class NEAT(object):
         Checks the settings if the current NEAT meets requirements to
         continue evolving.
         :return:
-            - bool - True | False
+            - should_evolve - bool
         """
         self.updateBestGenome()
         if self.settings.max_generations != 0 and self.generation >= self.settings.max_generations:
@@ -159,6 +147,7 @@ class NEAT(object):
             for specie_key, specie in enumerate(self.species):
                 if not self.cullPopulation(specie):
                     kill_species.append(specie_key)
+
             for specie_key in kill_species[::-1]:
                 self.species.pop(specie_key)
 
@@ -181,12 +170,12 @@ class NEAT(object):
         # Kills specie that did not meet minimum requirements
         if not specie.shouldSurvive():
             return False
-        else:
-            remove_duplicate = False
-            if self.generation % self.settings.remove_duplicate_interval == 0 and self.generation != 0:
-                remove_duplicate = True
-            specie.killGenomes(remove_duplicate)
-            specie.updateRepresentative()
+
+        remove_duplicate = False
+        if self.generation % self.settings.remove_duplicate_interval == 0 and self.generation != 0:
+            remove_duplicate = True
+        specie.killGenomes(remove_duplicate)
+        specie.updateRepresentative()
         return True
 
     def repopulate(self) -> None:
@@ -211,6 +200,7 @@ class NEAT(object):
                     for _ in range(offspring):
                         child = self.breed(self.settings.breed_probabilities, specie)
                         self.classifyGenome(child)
+
         # Introduces new species and genomes if populace is not restored
         for p in range(self.population - self.getPopulation()):
             genome = deepcopy(self.best_genome) if p % 3 == 0 else Genome(self.inputs, self.outputs,
@@ -227,39 +217,36 @@ class NEAT(object):
             - child - Genome
         """
         breed_by = getKeyByWeights(probabilities['breed'])
-
+        # Asexual
         if breed_by == "asexual" or len(specie.members) == 1:
             child = deepcopy(random.choice(specie.members))
             child.mutate(self.settings.mutation_probabilities)
             return child
-        else:  # sexual
-            crossover_by = getKeyByWeights(probabilities['crossover'])
-            if crossover_by == 'intraspecies' or len(self.species) < 2:
-                (x_member, y_member) = random.sample(specie.members, 2)
-            else:  # interspecies
-                species = [i for i in self.species if i != specie]
-                x_member = random.choice(specie.members)
-                y_member = random.choice(random.choice(species).members)
-            return genomicCrossover(x_member, y_member)
+
+        # Sexual
+        crossover_by = getKeyByWeights(probabilities['crossover'])
+        if crossover_by == 'intraspecies' or len(self.species) < 2:
+            (x_member, y_member) = random.sample(specie.members, 2)
+        else:  # interspecies
+            species = [i for i in self.species if i != specie]
+            x_member = random.choice(specie.members)
+            y_member = random.choice(random.choice(species).members)
+        return genomicCrossover(x_member, y_member)
 
     def classifyGenome(self, genome: Genome) -> None:
         """
-        Classifies the genome and groups it with first similar species or creates
-        a new specie.
+        Classifies the genome into first similar species or creates a new specie.
         :param genome: Genome
         :return:
             - None
         """
-        classified = False
-        if len(self.species) > 0:
-            for specie in self.species:
-                distance = genomicDistance(genome, specie.representative, self.settings.distance_weights)
-                if distance <= self.settings.delta_genome_threshold:
-                    specie.members.append(genome)
-                    classified = True
-                    break
-        if not classified:
-            self.species.append(Specie(self.settings, genome))
+        for specie in self.species:
+            distance = genomicDistance(genome, specie.representative, self.settings.distance_weights)
+            if distance <= self.settings.delta_genome_threshold:
+                specie.members.append(genome)
+                return
+        self.species.append(Specie(self.settings, genome))
+        return
 
     def updateBestGenome(self) -> None:
         """
@@ -268,10 +255,9 @@ class NEAT(object):
         :return:
             - None
         """
-        leading_genomes = [specie.representative for specie in self.species]
-        for genome in leading_genomes:
-            if genome.fitness > self.best_genome.fitness:
-                self.best_genome = deepcopy(genome)
+        for specie in self.species:
+            if specie.representative.fitness > self.best_genome.fitness:
+                self.best_genome = deepcopy(specie.representative)
 
     def getFitnessSum(self) -> int | float:
         """
@@ -284,17 +270,13 @@ class NEAT(object):
             fitness_sum += specie.fitness_mean
         return fitness_sum
 
-    def getGenome(self, specie: int = None, genome: int = None) -> Genome:
+    def getGenome(self) -> Genome:
         """
-        Returns the current genome or requested genome.
-        :param specie: int
-        :param genome: int
+        Returns the current genome.
         :return:
             - genome - Genome
         """
-        specie = self.current_species if specie is None else specie
-        genome = self.current_genome if genome is None else genome
-        return self.species[specie].members[genome]
+        return self.species[self.current_species].members[self.current_genome]
 
     def getPopulation(self) -> int:
         """
