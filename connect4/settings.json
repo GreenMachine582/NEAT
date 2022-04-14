@@ -42,9 +42,9 @@
         "connection_weight_adjust": 0.5,
         "connection_weight_set": 0.2,
         "activation": 0.01,
-        "add_node": 0.1,
-        "remove_node": 0.005,
+        "add_node": 0.08,
+        "remove_node": 0.08,
         "add_connection": 0.2,
-        "remove_connection": 0.01
+        "remove_connection": 0.2
     }
 }
