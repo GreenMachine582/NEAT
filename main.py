@@ -45,7 +45,7 @@ MODEL_NAME = "%s_%s"
 # Globals - Defaults
 players = [{'type': PLAYER_TYPES[1], 'difficulty': DIFFICULTY[0], 'neat': None},
            {'type': PLAYER_TYPES[2], 'difficulty': DIFFICULTY[0], 'neat': None}]
-game_speed = SPEEDS[1]
+game_speed = SPEEDS[2]
 evolution_speed = SPEEDS[-1]
 max_fps = max(FPS, max(game_speed, evolution_speed))
 show_every = SHOW_EVERY[1]
@@ -496,7 +496,7 @@ def main() -> None:
     Main is the main loop for the project and will display, update and check
     collisions with objects.
     :return:
-        - None
+        - play - bool
     """
     global display, connect4, network, info, menu, options
 
@@ -578,7 +578,8 @@ def main() -> None:
                                                                players[player_key]['difficulty'])
                         if players[player_key]['neat'].nextGenome(file_name):
                             checkBest(player_key)
-                    gens[player_key] = players[player_key]['neat'].generation
+                    if players[player_key]['type'] != PLAYER_TYPES[0]:
+                        gens[player_key] = players[player_key]['neat'].generation
                 if not display and show:
                     print(gen_str % tuple(gens))
                 connect4.reset()
@@ -600,8 +601,9 @@ def main() -> None:
             clock.tick(max_fps)
             frame_count += 1
 
-    close()
-
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    finally:
+        close()
