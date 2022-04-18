@@ -6,16 +6,16 @@ import random
 
 import neat
 from .genome import Genome
-from mattslib.dict import countOccurrence, sortIntoDict
+from mattslib.dict import sortIntoDict
 from mattslib.math_util import mean
 
-__version__ = '1.4.7'
-__date__ = '13/04/2022'
+__version__ = '1.4.8'
+__date__ = '19/04/2022'
 
 
 def genomicDistance(x_member: Genome, y_member: Genome, distance_weights: dict) -> float:
     """
-    Calculates the distance between genomes by summing the weighted genes.
+    Calculates the distance between two genomes by summing the weighted genes differences.
     :param x_member: Genome
     :param y_member: Genome
     :param distance_weights: dict[str: int | float]
@@ -47,7 +47,7 @@ def genomicDistance(x_member: Genome, y_member: Genome, distance_weights: dict) 
 
 class Specie(object):
     """
-    Separates the population into species with similar genomic distance.
+    Divides the population into manageable species based on the calculated genomic distance.
     """
     def __init__(self, settings: Settings, member: Genome):
         """
@@ -63,7 +63,8 @@ class Specie(object):
 
     def updateFitness(self) -> None:
         """
-        Adjusts the fitness for the members and update the specie fitness.
+        Adjusts each member's fitness and calculates the species
+        mean fitness.
         :return:
             - None
         """
@@ -74,7 +75,7 @@ class Specie(object):
 
     def updateFitnessHistory(self) -> None:
         """
-        Updates the fitness history with the sum of species mean fitness.
+        Updates the fitness history with mean fitness.
         :return:
             - None
         """
@@ -120,7 +121,7 @@ class Specie(object):
 
     def updateRepresentative(self) -> None:
         """
-        Representative is assigned by member with the highest adjusted fitness.
+        The species representative is an assigned member with the highest adjusted fitness.
         :return:
             - None
         """
@@ -133,7 +134,7 @@ class Specie(object):
         """
         Gets the genomic distance for each member in respects to the representative.
         :return:
-            - distances - list[int | float]
+            - distances - list[float]
         """
         distances = []
         for member in self.members:
@@ -149,7 +150,7 @@ class Specie(object):
         :return:
             - survive - bool
         """
-        if len(self.fitness_history) < self.settings.max_fitness_history:
+        if len(self.fitness_history) <= self.settings.max_fitness_history:
             return True
         if mean(self.fitness_history) > self.fitness_history[0]:
             return True
