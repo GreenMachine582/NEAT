@@ -6,8 +6,8 @@ import mattslib.pygame as mlpg
 from .message import Message
 from .shape import Rect, Circle
 
-__version__ = '1.2.3'
-__date__ = '7/04/2022'
+__version__ = '1.2.4'
+__date__ = '18/04/2022'
 
 
 class Button(object):
@@ -15,18 +15,23 @@ class Button(object):
     Button is an object that creates and draws interactive buttons for
     the user to use.
     """
-    def __init__(self, *args: Any, handler: Any = None, align: str = '', dims: list = None):
+    def __init__(self, text, pos, colour, handler: Any = None, args: Any = None,
+                 align: str = '', dims: list = None):
         """
         Initiates the Button object with given values.
-        :param args: Any
+        :param text: Any
+        :param pos: tuple[float, float]
+        :param colour: tuple[int, int, int]
         :param handler: Any
+        :param args: Any
         :param align: str
         :param dims: list[int | float]
         """
-        self.text = args[0]
-        self.pos = args[1]
-        self.colour = args[2]
+        self.text = text
+        self.pos = pos
+        self.colour = colour
         self.handler = handler
+        self.args = args
         self.align = align
         self.dims = dims
 
@@ -73,6 +78,8 @@ class Button(object):
             self.message.update(colour=kwargs['text_colour'])
         if 'handler' in kwargs:
             self.handler = kwargs['handler']
+        if 'args' in kwargs:
+            self.args = kwargs['args']
         if 'align' in kwargs:
             self.align = kwargs['align']
             self.button_rect.update(align=self.align)
@@ -91,7 +98,10 @@ class Button(object):
             self.mouse_over = self.button_rect.collide(mouse_pos, origin=origin)
             if self.mouse_over and mouse_clicked:
                 if callable(self.handler):
-                    return self.handler()
+                    if self.args is None:
+                        return self.handler()
+                    else:
+                        return self.handler(self.args)
                 return self.handler if self.handler is not None else True
 
         if self.active and self.mouse_over:
