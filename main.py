@@ -8,7 +8,7 @@ import random
 import pygame as pg
 
 from connect4 import Connect4
-from connect4 import visualize
+import visualize
 from neat import NEAT
 
 import mattslib as ml
@@ -51,22 +51,13 @@ max_fps = max(FPS, max(game_speed, evolution_speed))
 show_every = SHOW_EVERY[1]
 colour_theme = COLOUR_THEMES[1]
 
-# Globals - Pygame
-if display:
-    os.environ['SDL_VIDEO_WINDOW_POS'] = "0,30"
-    pg.init()
-    display = pg.display.set_mode((WIDTH, HEIGHT), depth=32)
+# Pygame
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
+os.environ['SDL_VIDEO_WINDOW_POS'] = "0,30"
 
-    pg.display.set_caption("Connect 4 with NEAT - v" + __version__)
-    game_display = pg.Surface(GAME_PANEL)
-    network_display = pg.Surface(NETWORK_BOX)
-    info_display = pg.Surface(INFO_BOX)
-    menu_display = pg.Surface((MENU_WIDTH, MENU_HEIGHT))
-    options_display = pg.Surface((OPTION_WIDTH, OPTION_HEIGHT))
-    display.fill(mlpg.BLACK)
-    clock = pg.time.Clock()
-
+# Global - objects
 connect4 = None
+game_board = None
 network = None
 info = None
 menu = None
@@ -137,13 +128,15 @@ def setup(users: list) -> list:
     :return:
         - users - list[dict[str: Any]]
     """
-    global connect4, network, info, menu, options
-    colours = getColourTheme()
-    connect4 = Connect4(GAME_PANEL, colour_theme=colours)
-    network = visualize.Network(NETWORK_BOX, colour_theme=colours)
-    info = visualize.Info(INFO_BOX, colour_theme=colours)
-    options = Options(colour_theme=colours)
-    menu = Menu(colour_theme=colours)
+    global connect4, game_board, network, info, menu, options, players
+    connect4 = Connect4()
+    if display:
+        colours = getColourTheme()
+        game_board = visualize.GameBoard(GAME_PANEL, connect4.ROWS, connect4.COLUMNS, colour_theme=colours)
+        network = visualize.Network(NETWORK_BOX, colour_theme=colours)
+        info = visualize.Info(INFO_BOX, colour_theme=colours)
+        options = Options(colour_theme=colours)
+        menu = Menu(colour_theme=colours)
     for player_key in range(connect4.MAX_PLAYERS):
         current_player = users[player_key]
         users[player_key]['neat'] = None
@@ -225,9 +218,17 @@ def checkBest(player_key: int, match_range: int = 50, win_threshold: float = 0.1
     if (win_count / match_range) >= win_threshold:
         print(f"New Best {players[player_key]['difficulty']} NEAT Gen[{players[player_key]['neat'].generation}]"
               f" (win rate): {round(win_count / match_range * 100, 2)}")
-        file = MODELS_DIR + MODEL_NAME % (PLAYER_TYPES[1], players[player_key]['difficulty'])
-        players[player_key]['neat'].save(file)
-        setup(players)
+        players[player_key]['neat'].save(MODEL_NAME % (PLAYER_TYPES[1], players[player_key]['difficulty']))
+        setup()
+
+
+def reset(args: Any = None):
+    if args is not None:
+        connect4.reset(args[0])
+    else:
+        connect4.reset()
+    if display:
+        game_board.reset()
 
 
 def close() -> None:
@@ -258,10 +259,11 @@ class Menu:
 
         self.buttons = [
             mlpg.Button("Reset", (MENU_WIDTH * (1 / 3), MENU_HEIGHT * (1 / 3)), self.colours['button'],
-                        handler=connect4.reset),
+                        handler=reset, args=(False,)),
             mlpg.Button("Options", (MENU_WIDTH * (2 / 3), MENU_HEIGHT * (1 / 3)), self.colours['button'],
                         handler=options.main),
-            mlpg.Button("Null", (MENU_WIDTH * (1 / 3), MENU_HEIGHT * (2 / 3)), self.colours['button']),
+            mlpg.Button("Swap Turn", (MENU_WIDTH * (1 / 3), MENU_HEIGHT * (2 / 3)), self.colours['button'],
+                        handler=reset),
             mlpg.Button("QUIT", (MENU_WIDTH * (2 / 3), MENU_HEIGHT * (2 / 3)), self.colours['button'],
                         handler=close)]
 
@@ -436,7 +438,7 @@ class Options:
                             button.update(colour=self.colours['button'], text_colour=self.colours['text'])
                         for message in self.messages:
                             message.update(colour=self.colours['text'])
-                        connect4.game_board.update(colour_theme=self.colours)
+                        game_board.update(colour_theme=self.colours)
                         network.update(colour_theme=self.colours)
                         info.update(colour_theme=self.colours)
                         menu.update(colour_theme=self.colours)
@@ -563,7 +565,17 @@ def main() -> None:
 
                     if show and display:
                         network.generate(current_genome)
-                        info.update(current_player['neat'].getInfo())
+                        info.update(player['neat'].getInfo())
+
+            if move is not None and move != connect4.INVALID_MOVE:
+                result = connect4.main(move)
+                if display:
+                    game_board.update(move=move, player=current_player)
+                    if result == connect4.WIN:
+                        game_board.showWin(connect4, move)
+
+                if not connect4.match:
+                    frame_count = 1
 
         if not connect4.match:
             if not display or not show or frame_count >= max_fps / speed:
@@ -582,14 +594,15 @@ def main() -> None:
                         gens[player_key] = players[player_key]['neat'].generation
                 if not display and show:
                     print(gen_str % tuple(gens))
-                connect4.reset()
+                reset()
 
         if display:
             menu.draw(menu_display)
             display.blit(menu_display, (GAME_PANEL[0], GAME_PANEL[1] - MENU_HEIGHT))
 
-            if show or current_player['type'] == PLAYER_TYPES[0]:
-                connect4.draw(game_display)
+            if show or player['type'] == PLAYER_TYPES[0]:
+                game_board.update(text=f"{connect4.PLAYERS[connect4.current_player]}'s turn!")
+                game_board.draw(game_display)
                 network.draw(network_display)
                 info.draw(info_display)
 
@@ -603,7 +616,21 @@ def main() -> None:
 
 
 if __name__ == '__main__':
-    try:
-        main()
-    finally:
-        close()
+    if display:
+        pg.init()
+        display = pg.display.set_mode((WIDTH, HEIGHT), depth=32)
+
+        pg.display.set_caption("Connect 4 with NEAT - v" + __version__)
+        game_display = pg.Surface(GAME_PANEL)
+        network_display = pg.Surface(NETWORK_BOX)
+        info_display = pg.Surface(INFO_BOX)
+        menu_display = pg.Surface((MENU_WIDTH, MENU_HEIGHT))
+        options_display = pg.Surface((OPTION_WIDTH, OPTION_HEIGHT))
+        display.fill(mlpg.BLACK)
+        clock = pg.time.Clock()
+    main()
+    # try:
+    #     main()
+    # except Exception as e:
+    #     print(e)
+    #     close()
