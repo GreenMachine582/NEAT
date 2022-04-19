@@ -48,6 +48,35 @@ class GameBoard:
             kwargs = kwargs['kwargs']
         self.update(kwargs=kwargs)
 
+    def reset(self):
+        for h in range(self.rows):
+            for j in range(self.columns):
+                self.game_board[h][j].update(piece=self.EMPTY)
+
+    def showWin(self, connect4: Connect4, move: tuple) -> None:
+        """
+        Shows winning connections surrounding the recent move.
+        :param connect4: Connect4
+        :param move: tuple[int, int]
+        :return:
+            - None
+        """
+        directions = connect4.getPieceSlices(move)
+        connection_counts = connect4.getConnectionCounts(directions, immediate_only=True)
+        for direction_pair in directions:
+            if sum(connection_counts[direction_pair]) + 1 >= connect4.LENGTH:
+                self.update(move=move, highlight_colour=mlpg.GREEN)
+                for direction in directions[direction_pair]:
+                    for n in range(1, connect4.LENGTH):
+                        a, b = move[0] + (n * direction[0]), move[1] + (n * direction[1])
+                        if 0 <= a < connect4.ROWS and 0 <= b < connect4.COLUMNS:
+                            if connect4.board[a][b] == connect4.board[move[0]][move[1]]:
+                                self.update(move=(a, b), highlight_colour=mlpg.GREEN)
+                            else:
+                                break
+                        else:
+                            break
+
     def update(self, **kwargs: Any) -> None:
         """
         Updates relevant attributes.
@@ -59,10 +88,6 @@ class GameBoard:
             kwargs = kwargs['kwargs']
         if 'text' in kwargs:
             self.player_text.update(text=kwargs['text'])
-        if 'reset' in kwargs and kwargs['reset']:
-            for h in range(self.rows):
-                for j in range(self.columns):
-                    self.game_board[h][j].update(piece=self.EMPTY)
         if 'move' in kwargs:
             move = kwargs['move']
             if 'player' in kwargs:
