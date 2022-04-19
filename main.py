@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import os
+import random
 import sys
 import time
-import random
 
 import pygame as pg
 
@@ -14,8 +14,8 @@ from neat import NEAT
 import mattslib as ml
 import mattslib.pygame as mlpg
 
-__version__ = '1.5.8'
-__date__ = '7/04/2022'
+__version__ = '1.6.1'
+__date__ = '19/04/2022'
 
 # Constants
 WIDTH, HEIGHT = 1120, 640
@@ -117,16 +117,15 @@ def setupAi(current_player: dict, outputs: int = 1, population: int = 100) -> NE
         neat = NEAT(ENVIRONMENT_DIR)
         inputs = NEAT_INPUTS[current_player['difficulty']]
         neat.generate(inputs, outputs, population=population)
-        neat.save(file)
+        neat.save(MODEL_NAME % (current_player['type'], current_player['difficulty']))
     return neat
 
 
-def setup(users: list) -> list:
+def setup() -> None:
     """
-    Sets the global variables and neats for players.
-    :param users: list[dict[str: Any]]
+    Sets the global variables and NEATs for players.
     :return:
-        - users - list[dict[str: Any]]
+        - None
     """
     global connect4, game_board, network, info, menu, options, players
     connect4 = Connect4()
@@ -138,33 +137,34 @@ def setup(users: list) -> list:
         options = Options(colour_theme=colours)
         menu = Menu(colour_theme=colours)
     for player_key in range(connect4.MAX_PLAYERS):
-        current_player = users[player_key]
-        users[player_key]['neat'] = None
+        current_player = players[player_key]
+        players[player_key]['neat'] = None
         if current_player['type'] != PLAYER_TYPES[0]:
-            users[player_key]['neat'] = setupAi(current_player)
-    return users
+            players[player_key]['neat'] = setupAi(current_player)
 
 
-def neatMove(player: dict, genome: Genome) -> int:
+def neatMove(genome: Genome, args: Any = None) -> tuple:
     """
     Calculates the best move for the genome with input data based on AI difficulty.
-    :param player: dict[str: Any]
     :param genome: Genome
+    :param args: Any
     :return:
-        - move - int
+        - move - tuple[int, int]
     """
+    c4, difficulty = args[0], args[1]
+    player_ids = [c4.current_player, c4.opponent]
     possible_moves = {}
-    for i in range(connect4.COLUMNS):
-        possible_move = connect4.getPossibleMove(i)
-        if possible_move[0] != connect4.INVALID_MOVE:
+    for i in range(c4.COLUMNS):
+        possible_move = c4.getPossibleMove(i)
+        if possible_move[0] != c4.INVALID_MOVE:
             possible_moves[possible_move] = 0
-    input_range = {'max': max(connect4.ROWS, connect4.COLUMNS), 'min': 0}
+    input_range = {'max': max(c4.ROWS, c4.COLUMNS), 'min': 0}
     for possible_move in possible_moves:
-        if player['difficulty'] == DIFFICULTY[0]:
+        if genome.inputs == difficulty[0]:
             inputs = {}
-            directions = connect4.getPieceSlices(possible_move)
-            for player_key in [connect4.current_player, connect4.opponent]:
-                connection_counts = connect4.getConnectionCounts(directions, player_key)
+            directions = c4.getPieceSlices(possible_move)
+            for player_key in player_ids:
+                connection_counts = c4.getConnectionCounts(directions, player_key, immediate_only=False)
                 for direction_pair in directions:
                     if direction_pair not in inputs:
                         inputs[direction_pair] = []
@@ -173,11 +173,11 @@ def neatMove(player: dict, genome: Genome) -> int:
                     inputs[direction_pair].append(normalized_input)
             for direction_pair in inputs:
                 possible_moves[possible_move] += sum(genome.forward(inputs[direction_pair]))
-        elif player['difficulty'] == DIFFICULTY[1]:
+        elif genome.inputs == difficulty[1]:
             inputs = []
-            directions = connect4.getPieceSlices(possible_move)
-            for player_key in [connect4.current_player, connect4.opponent]:
-                connection_counts = connect4.getConnectionCounts(directions, player_key)
+            directions = c4.getPieceSlices(possible_move)
+            for player_key in player_ids:
+                connection_counts = c4.getConnectionCounts(directions, player_key, immediate_only=False)
                 for direction_pair in directions:
                     connection = sum(connection_counts[direction_pair]) + 1
                     normalized_input = (connection - input_range['min']) / (input_range['max'] - input_range['min'])
@@ -185,8 +185,7 @@ def neatMove(player: dict, genome: Genome) -> int:
             possible_moves[possible_move] += sum(genome.forward(inputs))
     sorted_moves = ml.dict.combineByValues(possible_moves)
     max_min_keys = ml.list.findMaxMin(list(sorted_moves.keys()))
-    move = random.choice(sorted_moves[max_min_keys['max']['value']])
-    return move[1]
+    return random.choice(sorted_moves[max_min_keys['max']['value']])
 
 
 def checkBest(player_key: int, match_range: int = 50, win_threshold: float = 0.1) -> None:
@@ -199,22 +198,18 @@ def checkBest(player_key: int, match_range: int = 50, win_threshold: float = 0.1
     :return:
         - None
     """
-    setup(players)
+    setup()
+    c4 = Connect4()
     win_count = 0
     for _ in range(match_range):
-        run = True
-        while run:
-            current_player = players[connect4.current_player]
-            if connect4.match:
-                current_genome = current_player['neat'].best_genome
-                possible_move = neatMove(current_player, current_genome)
-                connect4.main(possible_move)
+        while c4.match:
+            current_player = players[c4.current_player]
+            best_genome = current_player['neat'].best_specie.representative
+            possible_move = neatMove(best_genome, (c4, DIFFICULTY))
+            if c4.main(possible_move) == c4.WIN:
+                win_count += 1 if c4.current_player == player_key else -1
+        reset()
 
-            if not connect4.match:
-                if connect4.result == connect4.WIN:
-                    win_count += 1 if connect4.current_player == player_key else -1
-                connect4.reset()
-                run = False
     if (win_count / match_range) >= win_threshold:
         print(f"New Best {players[player_key]['difficulty']} NEAT Gen[{players[player_key]['neat'].generation}]"
               f" (win rate): {round(win_count / match_range * 100, 2)}")
@@ -413,14 +408,14 @@ class Options:
                 if button_key is not None and self.group_buttons[group].active:
                     if 'Player' in group:
                         players[int(group[-2]) - 1]['type'] = PLAYER_TYPES[button_key]
-                        setup(players)
+                        setup()
                     elif 'Difficulty' in group:
                         players[int(group[-2]) - 1]['difficulty'] = DIFFICULTY[button_key]
                         if players[0]['difficulty'] == players[1]['difficulty']:
                             if players[0]['type'] == players[1]['type'] == PLAYER_TYPES[2]:
                                 players[0]['difficulty'] = DIFFICULTY[0]
                                 players[1]['difficulty'] = DIFFICULTY[1]
-                        setup(players)
+                        setup()
                     elif group == 'Game Speed:':
                         game_speed = SPEEDS[button_key]
                     elif group == 'Evolution Speed:':
@@ -502,11 +497,12 @@ def main() -> None:
     """
     global display, connect4, network, info, menu, options
 
-    setup(players)
+    setup()
 
     run, frame_count = True, 1
     while run:
-        current_player = players[connect4.current_player]
+        current_player = connect4.current_player
+        player = players[connect4.current_player]
         speed, show = getSpeedShow()
 
         possible_move = None
@@ -520,7 +516,7 @@ def main() -> None:
                 if event.type == pg.KEYDOWN:
                     if event.key == pg.K_ESCAPE:
                         close()
-                    if connect4.match and current_player['type'] == PLAYER_TYPES[0]:
+                    if connect4.match and player['type'] == PLAYER_TYPES[0]:
                         if event.key in [pg.K_1, pg.K_KP1]:
                             possible_move = 0
                         elif event.key in [pg.K_2, pg.K_KP2]:
@@ -542,26 +538,22 @@ def main() -> None:
             menu.update(mouse_pos, mouse_clicked)
 
         if connect4.match:
-            if current_player['type'] == PLAYER_TYPES[0]:
+            move = None
+            if player['type'] == PLAYER_TYPES[0]:  # Human move
                 if possible_move is not None:
-                    connect4.main(possible_move)
-                    if not connect4.match:
-                        frame_count = 1
-            else:
+                    move = connect4.getPossibleMove(possible_move)
+            else:  # NEAT Move
                 if not display or not show or frame_count >= max_fps / speed:
-                    frame_count = 1
-
-                    current_genome = None
-                    if current_player['type'] == PLAYER_TYPES[2]:
-                        if current_player['neat'].shouldEvolve():
-                            current_genome = current_player['neat'].getGenome()
+                    if player['type'] == PLAYER_TYPES[2]:
+                        if player['neat'].shouldEvolve():
+                            results = player['neat'].parallelTrain(neatMove, connect4, DIFFICULTY)
+                            file_name = MODEL_NAME % (player['type'], player['difficulty'])
+                            player['neat'].parallelEvolve(connect4.fitnessEvaluation, results, file_name=file_name)
                         else:
                             close()
-                    elif current_player['type'] == PLAYER_TYPES[1]:
-                        current_genome = current_player['neat'].best_genome
-
-                    possible_move = neatMove(current_player, current_genome)
-                    connect4.main(possible_move)
+                        checkBest(current_player)
+                    current_genome = player['neat'].best_specie.representative
+                    move = neatMove(current_genome, (connect4, DIFFICULTY))
 
                     if show and display:
                         network.generate(current_genome)
@@ -579,17 +571,9 @@ def main() -> None:
 
         if not connect4.match:
             if not display or not show or frame_count >= max_fps / speed:
-                fitness = connect4.fitnessEvaluation()
                 gen_str = 'Generation: 1 - %d, 2 - %d'
                 gens = [0, 0]
                 for i, player_key in enumerate([connect4.current_player, connect4.opponent]):
-                    if players[player_key]['type'] == PLAYER_TYPES[2] and players[player_key]['neat'].shouldEvolve():
-                        current_genome = players[player_key]['neat'].getGenome()
-                        current_genome.fitness = fitness[i]
-                        file_name = MODELS_DIR + MODEL_NAME % (players[player_key]['type'],
-                                                               players[player_key]['difficulty'])
-                        if players[player_key]['neat'].nextGenome(file_name):
-                            checkBest(player_key)
                     if players[player_key]['type'] != PLAYER_TYPES[0]:
                         gens[player_key] = players[player_key]['neat'].generation
                 if not display and show:
