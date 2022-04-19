@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 
-__version__ = '1.5.1'
+__version__ = '1.5.2'
 __date__ = '19/04/2022'
 
 
@@ -163,19 +163,20 @@ class Connect4:
             raw_fitness.pop(score)
         return fitness[move]
 
-    def main(self, move: tuple) -> None:
+    def main(self, move: tuple) -> int | None:
         """
         Adds the move to board and switches the players turn or concludes
         match depending on board status results.
         :param move: tuple[int, int]
         :return:
-            - None
+            - result - int | None
         """
         if self.match and self.active:
             self.board[move[0]][move[1]] = self.current_player
             self.turn += 1
-            result = self.gameBoardStatus(move)
+            result = self.getBoardStatus(move)
             if result == self.EMPTY:
                 self.switchPlayer()
             else:
                 self.match = False
+            return result
