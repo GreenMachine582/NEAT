@@ -1,21 +1,21 @@
 from __future__ import annotations
 
 import os
+import random
 import sys
 import time
-import random
 
 import pygame as pg
 
 from connect4 import Connect4
-from connect4 import visualize
+import visualize
 from neat import NEAT
 
 import mattslib as ml
 import mattslib.pygame as mlpg
 
-__version__ = '1.5.8'
-__date__ = '7/04/2022'
+__version__ = '1.6.1'
+__date__ = '20/04/2022'
 
 # Constants
 WIDTH, HEIGHT = 1120, 640
@@ -43,30 +43,21 @@ MODELS_DIR = f"{ENVIRONMENT_DIR}\\models\\"
 MODEL_NAME = "%s_%s"
 
 # Globals - Defaults
-players = [{'type': PLAYER_TYPES[0], 'difficulty': DIFFICULTY[0], 'neat': None},
-           {'type': PLAYER_TYPES[1], 'difficulty': DIFFICULTY[0], 'neat': None}]
-game_speed = SPEEDS[2]
+players = [{'type': PLAYER_TYPES[1], 'difficulty': DIFFICULTY[0], 'neat': None},
+           {'type': PLAYER_TYPES[1], 'difficulty': DIFFICULTY[1], 'neat': None}]
+game_speed = SPEEDS[0]
 evolution_speed = SPEEDS[-1]
 max_fps = max(FPS, max(game_speed, evolution_speed))
 show_every = SHOW_EVERY[1]
 colour_theme = COLOUR_THEMES[1]
 
-# Globals - Pygame
-if display:
-    os.environ['SDL_VIDEO_WINDOW_POS'] = "0,30"
-    pg.init()
-    display = pg.display.set_mode((WIDTH, HEIGHT), depth=32)
+# Pygame
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
+os.environ['SDL_VIDEO_WINDOW_POS'] = "0,30"
 
-    pg.display.set_caption("Connect 4 with NEAT - v" + __version__)
-    game_display = pg.Surface(GAME_PANEL)
-    network_display = pg.Surface(NETWORK_BOX)
-    info_display = pg.Surface(INFO_BOX)
-    menu_display = pg.Surface((MENU_WIDTH, MENU_HEIGHT))
-    options_display = pg.Surface((OPTION_WIDTH, OPTION_HEIGHT))
-    display.fill(mlpg.BLACK)
-    clock = pg.time.Clock()
-
+# Global - objects
 connect4 = None
+game_board = None
 network = None
 info = None
 menu = None
@@ -126,52 +117,54 @@ def setupAi(current_player: dict, outputs: int = 1, population: int = 100) -> NE
         neat = NEAT(ENVIRONMENT_DIR)
         inputs = NEAT_INPUTS[current_player['difficulty']]
         neat.generate(inputs, outputs, population=population)
-        neat.save(file)
+        neat.save(MODEL_NAME % (current_player['type'], current_player['difficulty']))
     return neat
 
 
-def setup(users: list) -> list:
+def setup() -> None:
     """
-    Sets the global variables and neats for players.
-    :param users: list[dict[str: Any]]
+    Sets the global variables and NEATs for players.
     :return:
-        - users - list[dict[str: Any]]
+        - None
     """
-    global connect4, network, info, menu, options
-    colours = getColourTheme()
-    connect4 = Connect4(GAME_PANEL, colour_theme=colours)
-    network = visualize.Network(NETWORK_BOX, colour_theme=colours)
-    info = visualize.Info(INFO_BOX, colour_theme=colours)
-    options = Options(colour_theme=colours)
-    menu = Menu(colour_theme=colours)
+    global connect4, game_board, network, info, menu, options, players
+    connect4 = Connect4()
+    if display:
+        colours = getColourTheme()
+        game_board = visualize.GameBoard(GAME_PANEL, connect4.ROWS, connect4.COLUMNS, colour_theme=colours)
+        network = visualize.Network(NETWORK_BOX, colour_theme=colours)
+        info = visualize.Info(INFO_BOX, colour_theme=colours)
+        options = Options(colour_theme=colours)
+        menu = Menu(colour_theme=colours)
     for player_key in range(connect4.MAX_PLAYERS):
-        current_player = users[player_key]
-        users[player_key]['neat'] = None
+        current_player = players[player_key]
+        players[player_key]['neat'] = None
         if current_player['type'] != PLAYER_TYPES[0]:
-            users[player_key]['neat'] = setupAi(current_player)
-    return users
+            players[player_key]['neat'] = setupAi(current_player)
 
 
-def neatMove(player: dict, genome: Genome) -> int:
+def neatMove(genome: Genome, args: Any = None) -> tuple:
     """
     Calculates the best move for the genome with input data based on AI difficulty.
-    :param player: dict[str: Any]
     :param genome: Genome
+    :param args: Any
     :return:
-        - move - int
+        - move - tuple[int, int]
     """
+    c4, difficulty = args[0], args[1]
+    player_ids = [c4.current_player, c4.opponent]
     possible_moves = {}
-    for i in range(connect4.COLUMNS):
-        possible_move = connect4.getPossibleMove(i)
-        if possible_move[0] != connect4.INVALID_MOVE:
+    for i in range(c4.COLUMNS):
+        possible_move = c4.getPossibleMove(i)
+        if possible_move[0] != c4.INVALID_MOVE:
             possible_moves[possible_move] = 0
-    input_range = {'max': max(connect4.ROWS, connect4.COLUMNS), 'min': 0}
+    input_range = {'max': max(c4.ROWS, c4.COLUMNS), 'min': 0}
     for possible_move in possible_moves:
-        if player['difficulty'] == DIFFICULTY[0]:
+        if genome.inputs == difficulty[0]:
             inputs = {}
-            directions = connect4.getPieceSlices(possible_move)
-            for player_key in [connect4.current_player, connect4.opponent]:
-                connection_counts = connect4.getConnectionCounts(directions, player_key)
+            directions = c4.getPieceSlices(possible_move)
+            for player_key in player_ids:
+                connection_counts = c4.getConnectionCounts(directions, player_key, immediate_only=False)
                 for direction_pair in directions:
                     if direction_pair not in inputs:
                         inputs[direction_pair] = []
@@ -180,11 +173,11 @@ def neatMove(player: dict, genome: Genome) -> int:
                     inputs[direction_pair].append(normalized_input)
             for direction_pair in inputs:
                 possible_moves[possible_move] += sum(genome.forward(inputs[direction_pair]))
-        elif player['difficulty'] == DIFFICULTY[1]:
+        elif genome.inputs == difficulty[1]:
             inputs = []
-            directions = connect4.getPieceSlices(possible_move)
-            for player_key in [connect4.current_player, connect4.opponent]:
-                connection_counts = connect4.getConnectionCounts(directions, player_key)
+            directions = c4.getPieceSlices(possible_move)
+            for player_key in player_ids:
+                connection_counts = c4.getConnectionCounts(directions, player_key, immediate_only=False)
                 for direction_pair in directions:
                     connection = sum(connection_counts[direction_pair]) + 1
                     normalized_input = (connection - input_range['min']) / (input_range['max'] - input_range['min'])
@@ -192,11 +185,10 @@ def neatMove(player: dict, genome: Genome) -> int:
             possible_moves[possible_move] += sum(genome.forward(inputs))
     sorted_moves = ml.dict.combineByValues(possible_moves)
     max_min_keys = ml.list.findMaxMin(list(sorted_moves.keys()))
-    move = random.choice(sorted_moves[max_min_keys['max']['value']])
-    return move[1]
+    return random.choice(sorted_moves[max_min_keys['max']['value']])
 
 
-def checkBest(player_key: int, match_range: int = 50, win_threshold: float = 0.1) -> None:
+def checkBest(player_key: int, match_range: int = 100, win_threshold: float = 0.15) -> None:
     """
     Update the best neat for each difficulty depending on win rate with current
     trained neat.
@@ -206,28 +198,41 @@ def checkBest(player_key: int, match_range: int = 50, win_threshold: float = 0.1
     :return:
         - None
     """
-    setup(players)
+    global players
+    opponent = abs(player_key - 1)
+    temp_opponent = players[opponent]
+
+    players[opponent] = {'type': PLAYER_TYPES[1], 'difficulty': players[player_key]['difficulty'], 'neat': None}
+    players[opponent]['neat'] = setupAi(players[opponent])
+    c4 = Connect4()
+
     win_count = 0
     for _ in range(match_range):
-        run = True
-        while run:
-            current_player = players[connect4.current_player]
-            if connect4.match:
-                current_genome = current_player['neat'].best_genome
-                possible_move = neatMove(current_player, current_genome)
-                connect4.main(possible_move)
+        while c4.match:
+            current_player = players[c4.current_player]
+            best_genome = current_player['neat'].best_specie.representative
+            possible_move = neatMove(best_genome, (c4, DIFFICULTY))
+            if c4.main(possible_move) == c4.WIN:
+                win_count += 1 if c4.current_player == player_key else -1
+        c4.reset()
 
-            if not connect4.match:
-                if connect4.result == connect4.WIN:
-                    win_count += 1 if connect4.current_player == player_key else -1
-                connect4.reset()
-                run = False
     if (win_count / match_range) >= win_threshold:
         print(f"New Best {players[player_key]['difficulty']} NEAT Gen[{players[player_key]['neat'].generation}]"
               f" (win rate): {round(win_count / match_range * 100, 2)}")
-        file = MODELS_DIR + MODEL_NAME % (PLAYER_TYPES[1], players[player_key]['difficulty'])
-        players[player_key]['neat'].save(file)
-        setup(players)
+        players[player_key]['neat'].save(MODEL_NAME % (PLAYER_TYPES[1], players[player_key]['difficulty']))
+
+    players[opponent] = temp_opponent
+    if players[opponent]['type'] != PLAYER_TYPES[0]:
+        players[opponent]['neat'] = setupAi(players[opponent])
+
+
+def reset(args: Any = None):
+    if args is not None:
+        connect4.reset(args[0])
+    else:
+        connect4.reset()
+    if display:
+        game_board.reset()
 
 
 def close() -> None:
@@ -258,10 +263,11 @@ class Menu:
 
         self.buttons = [
             mlpg.Button("Reset", (MENU_WIDTH * (1 / 3), MENU_HEIGHT * (1 / 3)), self.colours['button'],
-                        handler=connect4.reset),
+                        handler=reset, args=(False,)),
             mlpg.Button("Options", (MENU_WIDTH * (2 / 3), MENU_HEIGHT * (1 / 3)), self.colours['button'],
                         handler=options.main),
-            mlpg.Button("Null", (MENU_WIDTH * (1 / 3), MENU_HEIGHT * (2 / 3)), self.colours['button']),
+            mlpg.Button("Swap Turn", (MENU_WIDTH * (1 / 3), MENU_HEIGHT * (2 / 3)), self.colours['button'],
+                        handler=reset),
             mlpg.Button("QUIT", (MENU_WIDTH * (2 / 3), MENU_HEIGHT * (2 / 3)), self.colours['button'],
                         handler=close)]
 
@@ -411,14 +417,14 @@ class Options:
                 if button_key is not None and self.group_buttons[group].active:
                     if 'Player' in group:
                         players[int(group[-2]) - 1]['type'] = PLAYER_TYPES[button_key]
-                        setup(players)
+                        setup()
                     elif 'Difficulty' in group:
                         players[int(group[-2]) - 1]['difficulty'] = DIFFICULTY[button_key]
                         if players[0]['difficulty'] == players[1]['difficulty']:
                             if players[0]['type'] == players[1]['type'] == PLAYER_TYPES[2]:
                                 players[0]['difficulty'] = DIFFICULTY[0]
                                 players[1]['difficulty'] = DIFFICULTY[1]
-                        setup(players)
+                        setup()
                     elif group == 'Game Speed:':
                         game_speed = SPEEDS[button_key]
                     elif group == 'Evolution Speed:':
@@ -436,7 +442,7 @@ class Options:
                             button.update(colour=self.colours['button'], text_colour=self.colours['text'])
                         for message in self.messages:
                             message.update(colour=self.colours['text'])
-                        connect4.game_board.update(colour_theme=self.colours)
+                        game_board.update(colour_theme=self.colours)
                         network.update(colour_theme=self.colours)
                         info.update(colour_theme=self.colours)
                         menu.update(colour_theme=self.colours)
@@ -500,11 +506,12 @@ def main() -> None:
     """
     global display, connect4, network, info, menu, options
 
-    setup(players)
+    setup()
 
     run, frame_count = True, 1
     while run:
-        current_player = players[connect4.current_player]
+        current_player = connect4.current_player
+        player = players[connect4.current_player]
         speed, show = getSpeedShow()
 
         possible_move = None
@@ -518,7 +525,7 @@ def main() -> None:
                 if event.type == pg.KEYDOWN:
                     if event.key == pg.K_ESCAPE:
                         close()
-                    if connect4.match and current_player['type'] == PLAYER_TYPES[0]:
+                    if connect4.match and player['type'] == PLAYER_TYPES[0]:
                         if event.key in [pg.K_1, pg.K_KP1]:
                             possible_move = 0
                         elif event.key in [pg.K_2, pg.K_KP2]:
@@ -540,56 +547,55 @@ def main() -> None:
             menu.update(mouse_pos, mouse_clicked)
 
         if connect4.match:
-            if current_player['type'] == PLAYER_TYPES[0]:
+            move = None
+            if player['type'] == PLAYER_TYPES[0]:  # Human move
                 if possible_move is not None:
-                    connect4.main(possible_move)
-                    if not connect4.match:
-                        frame_count = 1
-            else:
+                    move = connect4.getPossibleMove(possible_move)
+            else:  # NEAT Move
                 if not display or not show or frame_count >= max_fps / speed:
-                    frame_count = 1
-
-                    current_genome = None
-                    if current_player['type'] == PLAYER_TYPES[2]:
-                        if current_player['neat'].shouldEvolve():
-                            current_genome = current_player['neat'].getGenome()
+                    if player['type'] == PLAYER_TYPES[2]:
+                        if player['neat'].shouldEvolve():
+                            results = player['neat'].parallelTrain(neatMove, connect4, DIFFICULTY)
+                            file_name = MODEL_NAME % (player['type'], player['difficulty'])
+                            player['neat'].parallelEvolve(connect4.fitnessEvaluation, results, file_name=file_name)
                         else:
                             close()
-                    elif current_player['type'] == PLAYER_TYPES[1]:
-                        current_genome = current_player['neat'].best_genome
-
-                    possible_move = neatMove(current_player, current_genome)
-                    connect4.main(possible_move)
+                        checkBest(current_player)
+                    current_genome = player['neat'].best_specie.representative
+                    move = neatMove(current_genome, (connect4, DIFFICULTY))
 
                     if show and display:
                         network.generate(current_genome)
-                        info.update(current_player['neat'].getInfo())
+                        info.update(player['neat'].getInfo())
+
+            if move is not None and move != connect4.INVALID_MOVE:
+                result = connect4.main(move)
+                if display:
+                    game_board.update(move=move, player=current_player)
+                    if result == connect4.WIN:
+                        game_board.showWin(connect4, move)
+
+                if not connect4.match:
+                    frame_count = 1
 
         if not connect4.match:
             if not display or not show or frame_count >= max_fps / speed:
-                fitness = connect4.fitnessEvaluation()
                 gen_str = 'Generation: 1 - %d, 2 - %d'
                 gens = [0, 0]
                 for i, player_key in enumerate([connect4.current_player, connect4.opponent]):
-                    if players[player_key]['type'] == PLAYER_TYPES[2] and players[player_key]['neat'].shouldEvolve():
-                        current_genome = players[player_key]['neat'].getGenome()
-                        current_genome.fitness = fitness[i]
-                        file_name = MODELS_DIR + MODEL_NAME % (players[player_key]['type'],
-                                                               players[player_key]['difficulty'])
-                        if players[player_key]['neat'].nextGenome(file_name):
-                            checkBest(player_key)
                     if players[player_key]['type'] != PLAYER_TYPES[0]:
                         gens[player_key] = players[player_key]['neat'].generation
                 if not display and show:
                     print(gen_str % tuple(gens))
-                connect4.reset()
+                reset()
 
         if display:
             menu.draw(menu_display)
             display.blit(menu_display, (GAME_PANEL[0], GAME_PANEL[1] - MENU_HEIGHT))
 
-            if show or current_player['type'] == PLAYER_TYPES[0]:
-                connect4.draw(game_display)
+            if show or player['type'] == PLAYER_TYPES[0]:
+                game_board.update(text=f"{connect4.PLAYERS[connect4.current_player]}'s turn!")
+                game_board.draw(game_display)
                 network.draw(network_display)
                 info.draw(info_display)
 
@@ -599,12 +605,25 @@ def main() -> None:
 
             pg.display.update()
             clock.tick(max_fps)
-            frame_count += 2
+            frame_count += 1
 
 
 if __name__ == '__main__':
-    try:
-        main()
-    except Exception as e:
-        print(e)
-        close()
+    if display:
+        pg.init()
+        display = pg.display.set_mode((WIDTH, HEIGHT), depth=32)
+
+        pg.display.set_caption("Connect 4 with NEAT - v" + __version__)
+        game_display = pg.Surface(GAME_PANEL)
+        network_display = pg.Surface(NETWORK_BOX)
+        info_display = pg.Surface(INFO_BOX)
+        menu_display = pg.Surface((MENU_WIDTH, MENU_HEIGHT))
+        options_display = pg.Surface((OPTION_WIDTH, OPTION_HEIGHT))
+        display.fill(mlpg.BLACK)
+        clock = pg.time.Clock()
+    main()
+    # try:
+    #     main()
+    # except Exception as e:
+    #     print(e)
+    #     close()

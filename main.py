@@ -15,7 +15,7 @@ import mattslib as ml
 import mattslib.pygame as mlpg
 
 __version__ = '1.6.1'
-__date__ = '19/04/2022'
+__date__ = '20/04/2022'
 
 # Constants
 WIDTH, HEIGHT = 1120, 640
@@ -45,7 +45,7 @@ MODEL_NAME = "%s_%s"
 # Globals - Defaults
 players = [{'type': PLAYER_TYPES[1], 'difficulty': DIFFICULTY[0], 'neat': None},
            {'type': PLAYER_TYPES[2], 'difficulty': DIFFICULTY[0], 'neat': None}]
-game_speed = SPEEDS[2]
+game_speed = SPEEDS[0]
 evolution_speed = SPEEDS[-1]
 max_fps = max(FPS, max(game_speed, evolution_speed))
 show_every = SHOW_EVERY[1]
