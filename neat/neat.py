@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import multiprocessing
 import random
 
 from .genome import Genome
@@ -9,8 +10,10 @@ from .specie import Specie, genomicDistance
 from mattslib.dict import countOccurrence, getKeyByWeights
 from mattslib.file import read, write
 
-__version__ = '1.4.8'
-__date__ = '14/04/2022'
+__version__ = '1.5.1'
+__date__ = '20/04/2022'
+
+num_workers = max(multiprocessing.cpu_count() - 1, 1)
 
 
 def genomicCrossover(x_member: Genome, y_member: Genome) -> Genome:
@@ -56,6 +59,7 @@ class NEAT(object):
         :param environment_dir: str
         """
         self.settings = Settings(environment_dir)
+        self.file_dir = environment_dir + '\\models\\'
         self.inputs = 0
         self.outputs = 0
 
@@ -66,6 +70,7 @@ class NEAT(object):
         self.current_species = 0
         self.current_genome = 0
 
+        self.best_specie = None
         self.best_genome = None
 
     def generate(self, inputs: int, outputs: int, population: int = 100) -> None:
@@ -87,6 +92,7 @@ class NEAT(object):
             genome = Genome(self.inputs, self.outputs, self.settings.node_info)
             self.classifyGenome(genome)
 
+        self.best_specie = self.species[0]
         self.best_genome = self.species[0].members[0]
 
     def nextGenome(self, filename: str) -> bool:
@@ -97,8 +103,7 @@ class NEAT(object):
         :return:
             - new_generation - bool
         """
-        specie = self.species[self.current_species]
-        if self.current_genome < len(specie.members) - 1:
+        if self.current_genome < len(self.species[self.current_species].members) - 1:
             self.current_genome += 1
         else:
             self.current_genome = 0
@@ -107,14 +112,41 @@ class NEAT(object):
             else:
                 self.evolve()
                 self.current_species = 0
-                self.save(f"{filename}")
-                if self.generation in self.settings.save_intervals:
-                    self.save(f"{filename}_gen_{self.generation}")
-                elif self.settings.save_model_interval != 0 and\
-                        self.generation % self.settings.save_model_interval == 0:
-                    self.save(f"{filename}_gen_{self.generation}")
+                self.save(f"{file_name}")
+                save_interval = self.settings.save_model_interval
+                if self.generation in self.settings.save_intervals or \
+                        save_interval != 0 and self.generation % save_interval == 0:
+                    self.save(f"{file_name}_gen_{self.generation}")
                 return True
         return False
+
+    def parallelTrain(self, handler, *args):
+        with multiprocessing.Pool(processes=num_workers) as pool:
+            results = {}
+            for specie_key, specie in enumerate(self.species):
+                for member_key, member in enumerate(specie.members):
+                    results[(specie_key, member_key)] = pool.apply_async(handler, args=(member, args))
+
+            for result_key in results:
+                results[result_key] = results[result_key].get()
+        return results
+
+    def parallelEvolve(self, evaluator, results, *args, **kwargs):
+        with multiprocessing.Pool(processes=num_workers) as pool:
+            for result_key in results:
+                results[result_key] = pool.apply_async(evaluator, args=(results[result_key], args))
+
+            for result_key in results:
+                member = self.species[result_key[0]].members[result_key[1]]
+                member.fitness = results[result_key].get()
+
+        self.evolve()
+
+        if 'file_name' in kwargs:
+            self.save(f"{kwargs['file_name']}")
+            if self.generation in self.settings.save_intervals or \
+                    self.settings.save_model_interval != 0 and self.generation % self.settings.save_model_interval == 0:
+                self.save(f"{kwargs['file_name']}_gen_{self.generation}")
 
     def shouldEvolve(self) -> bool:
         """
@@ -123,7 +155,6 @@ class NEAT(object):
         :return:
             - should_evolve - bool
         """
-        self.updateBestGenome()
         if self.settings.max_generations != 0 and self.generation >= self.settings.max_generations:
             return False
         if self.settings.max_fitness != 0 and self.best_genome.fitness >= self.settings.max_fitness:
@@ -157,6 +188,8 @@ class NEAT(object):
             for specie in self.species:
                 for member in specie.members:
                     member.mutate(self.settings.mutation_probabilities)
+
+        self.updateBest()
         self.generation += 1
 
     def cullPopulation(self, specie: Specie) -> bool:
@@ -248,14 +281,17 @@ class NEAT(object):
         self.species.append(Specie(self.settings, genome))
         return
 
-    def updateBestGenome(self) -> None:
+    def updateBest(self) -> None:
         """
-        Updates the best genome by searching for the highest fitness from
-        each specie.
+        Updates the best specie and genome by searching for best fitness history
+        and highest adjusted fitness.
         :return:
             - None
         """
         for specie in self.species:
+            specie.updateRepresentative()
+            if specie.fitness_history > self.best_specie.fitness_history:
+                self.best_specie = deepcopy(specie)
             if specie.representative.fitness > self.best_genome.fitness:
                 self.best_genome = deepcopy(specie.representative)
 
@@ -307,14 +343,14 @@ class NEAT(object):
         if 'environment_dir' in kwargs:
             self.settings = Settings(kwargs['environment_dir'])
 
-    def save(self, file_dir: str) -> None:
+    def save(self, file_name: str) -> None:
         """
         Saves the NEAT object by writing to file.
-        :param file_dir: str
+        :param file_name: str
         :return:
             - None
         """
-        write(self, file_dir + '.neat')
+        write(self, self.file_dir + file_name + '.neat')
 
     @staticmethod
     def load(file_dir: str) -> NEAT:
