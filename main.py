@@ -188,7 +188,7 @@ def neatMove(genome: Genome, args: Any = None) -> tuple:
     return random.choice(sorted_moves[max_min_keys['max']['value']])
 
 
-def checkBest(player_key: int, match_range: int = 50, win_threshold: float = 0.1) -> None:
+def checkBest(player_key: int, match_range: int = 100, win_threshold: float = 0.15) -> None:
     """
     Update the best neat for each difficulty depending on win rate with current
     trained neat.
@@ -198,8 +198,14 @@ def checkBest(player_key: int, match_range: int = 50, win_threshold: float = 0.1
     :return:
         - None
     """
-    setup()
+    global players
+    opponent = abs(player_key - 1)
+    temp_opponent = players[opponent]
+
+    players[opponent] = {'type': PLAYER_TYPES[1], 'difficulty': players[player_key]['difficulty'], 'neat': None}
+    players[opponent]['neat'] = setupAi(players[opponent])
     c4 = Connect4()
+
     win_count = 0
     for _ in range(match_range):
         while c4.match:
@@ -208,13 +214,16 @@ def checkBest(player_key: int, match_range: int = 50, win_threshold: float = 0.1
             possible_move = neatMove(best_genome, (c4, DIFFICULTY))
             if c4.main(possible_move) == c4.WIN:
                 win_count += 1 if c4.current_player == player_key else -1
-        reset()
+        c4.reset()
 
     if (win_count / match_range) >= win_threshold:
         print(f"New Best {players[player_key]['difficulty']} NEAT Gen[{players[player_key]['neat'].generation}]"
               f" (win rate): {round(win_count / match_range * 100, 2)}")
         players[player_key]['neat'].save(MODEL_NAME % (PLAYER_TYPES[1], players[player_key]['difficulty']))
-        setup()
+
+    players[opponent] = temp_opponent
+    if players[opponent]['type'] != PLAYER_TYPES[0]:
+        players[opponent]['neat'] = setupAi(players[opponent])
 
 
 def reset(args: Any = None):
