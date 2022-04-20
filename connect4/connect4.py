@@ -2,7 +2,7 @@ from __future__ import annotations
 
 
 __version__ = '1.5.2'
-__date__ = '19/04/2022'
+__date__ = '20/04/2022'
 
 
 class Connect4:
@@ -146,14 +146,15 @@ class Connect4:
             possible_move = self.getPossibleMove(i)
             if possible_move != self.INVALID_MOVE:
                 directions = self.getPieceSlices(possible_move)
-                score = 0
+                max_connection_length = 0
                 for piece in [self.current_player, self.opponent]:
                     connection_counts = self.getConnectionCounts(directions, piece, immediate_only=False)
                     for direction_pair in connection_counts:
-                        score += sum(connection_counts[direction_pair])
-                if score not in raw_fitness:
-                    raw_fitness[score] = []
-                raw_fitness[score].append(possible_move)
+                        max_connection_length = max(sum(connection_counts[direction_pair]), max_connection_length)
+                connection_length = min(max_connection_length, self.LENGTH - 1)
+                if connection_length not in raw_fitness:
+                    raw_fitness[connection_length] = []
+                raw_fitness[connection_length].append(possible_move)
 
         fitness = {}
         while raw_fitness:
