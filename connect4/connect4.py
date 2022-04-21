@@ -139,10 +139,11 @@ class Connect4:
         # Draw
         return self.DRAW
 
-    def fitnessEvaluation(self, *args: Any) -> int:
+    def fitnessEvaluation(self, *args: Any, offset: int = 0.5) -> int:
         """
         Evaluates the fitness score using surrounding connections.
         :param args: Any
+        :param offset: int
         :return:
             - fitness - int
         """
@@ -161,7 +162,7 @@ class Connect4:
                     player_score = max(min(sum(player_counts[direction_pair]) + 1, self.LENGTH), player_score)
                     opponent_score = max(min(sum(opponent_counts[direction_pair]) + 1, self.LENGTH), opponent_score)
 
-                score = max(player_score + 1, opponent_score)
+                score = max(player_score + offset, opponent_score)
                 if score not in raw_fitness:
                     raw_fitness[score] = []
                 raw_fitness[score].append(possible_move)
