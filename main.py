@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import multiprocessing
 import random
 import sys
 import time
@@ -43,8 +44,8 @@ MODELS_DIR = f"{ENVIRONMENT_DIR}\\models\\"
 MODEL_NAME = "%s_%s"
 
 # Globals - Defaults
-players = [{'type': PLAYER_TYPES[1], 'difficulty': DIFFICULTY[0], 'neat': None},
-           {'type': PLAYER_TYPES[2], 'difficulty': DIFFICULTY[0], 'neat': None}]
+players = [{'type': PLAYER_TYPES[2], 'difficulty': DIFFICULTY[0], 'neat': None},
+           {'type': PLAYER_TYPES[2], 'difficulty': DIFFICULTY[1], 'neat': None}]
 game_speed = SPEEDS[0]
 evolution_speed = SPEEDS[-1]
 max_fps = max(FPS, max(game_speed, evolution_speed))
@@ -162,7 +163,7 @@ def neatMove(genome: Genome, args: Any = None) -> tuple:
     for possible_move in possible_moves:
         if genome.inputs == difficulty[0]:
             inputs = {}
-            directions = c4.getPieceSlices(possible_move)
+            directions = c4.getDirectionalSlices(possible_move)
             for player_key in player_ids:
                 connection_counts = c4.getConnectionCounts(directions, player_key, immediate_only=False)
                 for direction_pair in directions:
@@ -175,7 +176,7 @@ def neatMove(genome: Genome, args: Any = None) -> tuple:
                 possible_moves[possible_move] += sum(genome.forward(inputs[direction_pair]))
         elif genome.inputs == difficulty[1]:
             inputs = []
-            directions = c4.getPieceSlices(possible_move)
+            directions = c4.getDirectionalSlices(possible_move)
             for player_key in player_ids:
                 connection_counts = c4.getConnectionCounts(directions, player_key, immediate_only=False)
                 for direction_pair in directions:
@@ -218,7 +219,7 @@ def checkBest(player_key: int, match_range: int = 100, win_threshold: float = 0.
 
     if (win_count / match_range) >= win_threshold:
         print(f"New Best {players[player_key]['difficulty']} NEAT Gen[{players[player_key]['neat'].generation}]"
-              f" (win rate): {round(win_count / match_range * 100, 2)}")
+              f" (win rate): {round(win_count / match_range * 100, 2):2}%")
         players[player_key]['neat'].save(MODEL_NAME % (PLAYER_TYPES[1], players[player_key]['difficulty']))
 
     players[opponent] = temp_opponent
@@ -242,7 +243,7 @@ def close() -> None:
         - None
     """
     pg.quit()
-    print(f"Thanks for using C4 with NEAT")
+    print(f"Thanks for using NEAT with C4")
     time.sleep(1)
     sys.exit()
 
@@ -323,7 +324,7 @@ class Options:
         self.messages = []
 
         self.generate()
-        self.update()
+        self.update(kwargs=kwargs)
 
     def generate(self) -> None:
         """
@@ -519,12 +520,12 @@ def main() -> None:
         if display:
             for event in pg.event.get():
                 if event.type == pg.QUIT:
-                    close()
+                    return
                 if event.type == pg.MOUSEBUTTONDOWN:
                     mouse_clicked = True
                 if event.type == pg.KEYDOWN:
                     if event.key == pg.K_ESCAPE:
-                        close()
+                        return
                     if connect4.match and player['type'] == PLAYER_TYPES[0]:
                         if event.key in [pg.K_1, pg.K_KP1]:
                             possible_move = 0
@@ -555,11 +556,11 @@ def main() -> None:
                 if not display or not show or frame_count >= max_fps / speed:
                     if player['type'] == PLAYER_TYPES[2]:
                         if player['neat'].shouldEvolve():
-                            results = player['neat'].parallelTrain(neatMove, connect4, DIFFICULTY)
+                            results = player['neat'].parallelTest(neatMove, connect4, DIFFICULTY)
                             file_name = MODEL_NAME % (player['type'], player['difficulty'])
                             player['neat'].parallelEvolve(connect4.fitnessEvaluation, results, file_name=file_name)
                         else:
-                            close()
+                            return
                         checkBest(current_player)
                     current_genome = player['neat'].best_specie.representative
                     move = neatMove(current_genome, (connect4, DIFFICULTY))
@@ -621,9 +622,9 @@ if __name__ == '__main__':
         options_display = pg.Surface((OPTION_WIDTH, OPTION_HEIGHT))
         display.fill(mlpg.BLACK)
         clock = pg.time.Clock()
-    main()
-    # try:
-    #     main()
-    # except Exception as e:
-    #     print(e)
-    #     close()
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        close()
