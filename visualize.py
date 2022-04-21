@@ -5,8 +5,8 @@ import pygame as pg
 import mattslib as ml
 import mattslib.pygame as mlpg
 
-__version__ = '1.1.3'
-__date__ = '7/04/2022'
+__version__ = '1.2.1'
+__date__ = '21/04/2022'
 
 
 class GameBoard:
@@ -17,10 +17,10 @@ class GameBoard:
     BOARDER = 10
     EMPTY = -1
 
-    def __init__(self, game_dims, rows, columns, **kwargs: Any):
+    def __init__(self, game_dims: tuple, rows: int, columns: int, **kwargs: Any):
         """
         Initiates the object with required values.
-        :param game_dims: tuple[int | float, int | float]
+        :param game_dims: tuple[float, float]
         :param rows: int
         :param columns: int
         :param kwargs: Any
@@ -48,20 +48,25 @@ class GameBoard:
             kwargs = kwargs['kwargs']
         self.update(kwargs=kwargs)
 
-    def reset(self):
+    def reset(self) -> None:
+        """
+        Resets the game board by updating the pieces value.
+        :return:
+            - None
+        """
         for h in range(self.rows):
             for j in range(self.columns):
                 self.game_board[h][j].update(piece=self.EMPTY)
 
     def showWin(self, connect4: Connect4, move: tuple) -> None:
         """
-        Shows winning connections surrounding the recent move.
+        Shows winning connections surrounding the given move.
         :param connect4: Connect4
         :param move: tuple[int, int]
         :return:
             - None
         """
-        directions = connect4.getPieceSlices(move)
+        directions = connect4.getDirectionalSlices(move)
         connection_counts = connect4.getConnectionCounts(directions, immediate_only=True)
         for direction_pair in directions:
             if sum(connection_counts[direction_pair]) + 1 >= connect4.LENGTH:
@@ -106,7 +111,7 @@ class GameBoard:
 
     def draw(self, surface: Any) -> None:
         """
-        Draws the game board and pieces to the surface.
+        Draws the game board to the surface.
         :param surface: Any
         :return:
             - None
@@ -130,14 +135,14 @@ class Piece:
     TOP_PADDING = 60
     SPACING = 10
 
-    def __init__(self, coordinates: tuple, rows: int, cols: int, piece: int, game_height: int | float):
+    def __init__(self, coordinates: tuple, rows: int, cols: int, piece: int, game_height: float):
         """
         Initiates the object with required values.
         :param coordinates: tuple[int, int]
         :param rows: int
         :param cols: int
         :param piece: int
-        :param game_height: int | float
+        :param game_height: float
         """
         self.coordinates = coordinates
         self.radius = 30
@@ -201,7 +206,7 @@ class Network:
     def __init__(self, network_dims: tuple, **kwargs: Any):
         """
         Sets the networks dimensions and certain values.
-        :param network_dims: tuple[int | float, int | float]
+        :param network_dims: tuple[float, float]
         :param kwargs: Any
         """
         self.network_width = network_dims[0]
@@ -215,18 +220,18 @@ class Network:
 
         self.update(kwargs=kwargs)
 
-    def generate(self, current_genome: Genome, width: int | float = None, height: int | float = None) -> None:
+    def generate(self, current_genome: Genome, dims: tuple = None) -> None:
         """
         Creates the neural network visual of the current genome.
-        :param current_genome:
-        :param width:
-        :param height:
+        :param current_genome: Genome
+        :param dims: tuple[float, float]
         :return:
         """
-        if width is None:
+        if dims is None:
             width = self.network_width - (2 * self.BOARDER)
-        if height is None:
             height = self.network_height - (2 * self.BOARDER)
+        else:
+            width, height = dims[0], dims[1]
 
         self.network = {}
         node_depths = current_genome.getNodesByDepth()
