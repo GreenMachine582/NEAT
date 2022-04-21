@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-import pygame as pg
-
 import mattslib.pygame as mlpg
 from .message import Message
-from .shape import Rect, Circle
+from .shape import Rect
 
-__version__ = '1.2.4'
-__date__ = '18/04/2022'
+__version__ = '1.2.5'
+__date__ = '21/04/2022'
 
 
 class Button(object):
@@ -15,8 +13,8 @@ class Button(object):
     Button is an object that creates and draws interactive buttons for
     the user to use.
     """
-    def __init__(self, text, pos, colour, handler: Any = None, args: Any = None,
-                 align: str = '', dims: list = None):
+    def __init__(self, text: Any, pos: tuple, colour: tuple, handler: Any = None, args: Any = None, align: str = '',
+                 dims: list = None):
         """
         Initiates the Button object with given values.
         :param text: Any

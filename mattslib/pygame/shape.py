@@ -4,8 +4,8 @@ import math
 
 import pygame as pg
 
-__version__ = '1.2.2'
-__date__ = '7/04/2022'
+__version__ = '1.2.3'
+__date__ = '21/04/2022'
 
 
 class Rect(object):
@@ -14,11 +14,11 @@ class Rect(object):
     given environment.
     """
 
-    def __init__(self, pos: tuple, colour: list, dims: list, align: str = ''):
+    def __init__(self, pos: tuple, colour: tuple, dims: list, align: str = ''):
         """
         Initiates the Rect object with given values.
         :param pos: tuple[int | float, int | float]
-        :param colour: list[int]
+        :param colour: tuple[int, int, int]
         :param dims: list[int | float]
         :param align: str
         """
@@ -93,11 +93,11 @@ class Circle(object):
     given environment.
     """
 
-    def __init__(self, pos: tuple, colour: list, radius: float, align: str = ''):
+    def __init__(self, pos: tuple, colour: tuple, radius: float, align: str = ''):
         """
         Initiates the Circle object with given values.
         :param pos: tuple[float, float]
-        :param colour: list[int]
+        :param colour: tuple[int, int, int]
         :param radius: float
         :param align: str
         """
