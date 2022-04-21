@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 
-__version__ = '1.5.2'
-__date__ = '20/04/2022'
+__version__ = '1.5.3'
+__date__ = '21/04/2022'
 
 
 class Connect4:
@@ -68,7 +68,7 @@ class Connect4:
             move = row
         return move, possible_move
 
-    def getPieceSlices(self, move: tuple) -> dict:
+    def getDirectionalSlices(self, move: tuple) -> dict:
         """
         Gets the piece slices surrounding the move.
         :param move: tuple[int, int]
@@ -92,15 +92,21 @@ class Connect4:
                             break
         return directions
 
-    def getConnectionCounts(self, directions, player: int = None, immediate_only: bool = True):
+    def getConnectionCounts(self, directions: dict, player: int = None, immediate_only: bool = True) -> dict:
+        """
+        Counts the surrounding connections using given directional slices.
+        :param directions: dict[str: dict]
+        :param player: int
+        :param immediate_only: bool
+        :return:
+            - counts - dict[str: dict]
+        """
         counts = {}
-        if player is None:
-            player = self.current_player
+        player = player if player is not None else self.current_player
         for direction_pair in directions:
             counts[direction_pair] = []
             for direction in directions[direction_pair]:
-                connection_count = 0
-                count_connections = True
+                connection_count, count_connections = 0, True
                 for piece_key in range(1, len(directions[direction_pair][direction])):
                     piece = directions[direction_pair][direction][piece_key]
                     if piece == player and count_connections:
@@ -119,7 +125,7 @@ class Connect4:
             - result - int
         """
         # Checks for a winning connection
-        directions = self.getPieceSlices(move)
+        directions = self.getDirectionalSlices(move)
         connection_counts = self.getConnectionCounts(directions)
         for direction_pair in directions:
             if sum(connection_counts[direction_pair]) + 1 >= self.LENGTH:
@@ -133,28 +139,32 @@ class Connect4:
         # Draw
         return self.DRAW
 
-    def fitnessEvaluation(self, move: tuple, args: Any = None) -> int:
+    def fitnessEvaluation(self, *args: Any) -> int:
         """
-        Evaluates the fitness using surrounding connections.
-        :param move: tuple[int, int]
+        Evaluates the fitness score using surrounding connections.
         :param args: Any
         :return:
             - fitness - int
         """
+        move = None if not args else args[0]
+
         raw_fitness = {}
         for i in range(self.COLUMNS):
             possible_move = self.getPossibleMove(i)
             if possible_move != self.INVALID_MOVE:
-                directions = self.getPieceSlices(possible_move)
-                max_connection_length = 0
-                for piece in [self.current_player, self.opponent]:
-                    connection_counts = self.getConnectionCounts(directions, piece, immediate_only=False)
-                    for direction_pair in connection_counts:
-                        max_connection_length = max(sum(connection_counts[direction_pair]), max_connection_length)
-                connection_length = min(max_connection_length, self.LENGTH - 1)
-                if connection_length not in raw_fitness:
-                    raw_fitness[connection_length] = []
-                raw_fitness[connection_length].append(possible_move)
+                directions = self.getDirectionalSlices(possible_move)
+
+                player_score, opponent_score = 0, 0
+                player_counts = self.getConnectionCounts(directions, self.current_player, immediate_only=False)
+                opponent_counts = self.getConnectionCounts(directions, self.opponent, immediate_only=False)
+                for direction_pair in player_counts:
+                    player_score = max(min(sum(player_counts[direction_pair]) + 1, self.LENGTH), player_score)
+                    opponent_score = max(min(sum(opponent_counts[direction_pair]) + 1, self.LENGTH), opponent_score)
+
+                score = max(player_score + 1, opponent_score)
+                if score not in raw_fitness:
+                    raw_fitness[score] = []
+                raw_fitness[score].append(possible_move)
 
         fitness = {}
         while raw_fitness:
