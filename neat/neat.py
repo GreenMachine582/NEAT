@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+import concurrent.futures
 from copy import deepcopy
-import multiprocessing
 import random
 
 from .genome import Genome
@@ -10,10 +10,8 @@ from .specie import Specie, genomicDistance
 from mattslib.dict import countOccurrence, getKeyByWeights
 from mattslib.file import read, write
 
-__version__ = '1.5.1'
-__date__ = '20/04/2022'
-
-num_workers = max(multiprocessing.cpu_count() - 1, 1)
+__version__ = '1.5.2'
+__date__ = '21/04/2022'
 
 
 def genomicCrossover(x_member: Genome, y_member: Genome) -> Genome:
@@ -95,11 +93,11 @@ class NEAT(object):
         self.best_specie = self.species[0]
         self.best_genome = self.species[0].members[0]
 
-    def nextGenome(self, filename: str) -> bool:
+    def nextGenome(self, file_name: str) -> bool:
         """
         Gets the next genome in population, updates counters and
         saves models at certain intervals.
-        :param filename: str
+        :param file_name: str
         :return:
             - new_generation - bool
         """
@@ -113,40 +111,53 @@ class NEAT(object):
                 self.evolve()
                 self.current_species = 0
                 self.save(f"{file_name}")
-                save_interval = self.settings.save_model_interval
-                if self.generation in self.settings.save_intervals or \
-                        save_interval != 0 and self.generation % save_interval == 0:
-                    self.save(f"{file_name}_gen_{self.generation}")
+                self.generation_save(file_name)
                 return True
         return False
 
-    def parallelTrain(self, handler, *args):
-        with multiprocessing.Pool(processes=num_workers) as pool:
-            results = {}
+    def parallelTest(self, handler: Any, *args: Any) -> dict:
+        """
+        The environment will test the whole population by performing a forward
+        propagation using multithreading techniques.
+        :param handler: Any
+        :param args: Any
+        :return:
+            - results - dict[tuple: float]
+        """
+        threads, results = {}, {}
+        with concurrent.futures.ThreadPoolExecutor() as executor:
             for specie_key, specie in enumerate(self.species):
                 for member_key, member in enumerate(specie.members):
-                    results[(specie_key, member_key)] = pool.apply_async(handler, args=(member, args))
-
-            for result_key in results:
-                results[result_key] = results[result_key].get()
+                    threads[(specie_key, member_key)] = executor.submit(handler, member, args)
+            for result_key in threads:
+                results[result_key] = threads[result_key].result()
         return results
 
-    def parallelEvolve(self, evaluator, results, *args, **kwargs):
-        with multiprocessing.Pool(processes=num_workers) as pool:
+    def parallelEvolve(self, evaluator: Any, results: dict, *args: Any, **kwargs: Any) -> None:
+        """
+        Evaluates the whole population using multithreading techniques and then
+        evolves to form the next generation.
+        :param evaluator: Any
+        :param results: dict[tuple: tuple]
+        :param args: Any
+        :param kwargs: Any
+        :return:
+            - None
+        """
+        threads = {}
+        with concurrent.futures.ThreadPoolExecutor() as executor:
             for result_key in results:
-                results[result_key] = pool.apply_async(evaluator, args=(results[result_key], args))
+                threads[result_key] = executor.submit(evaluator, results[result_key], args)
 
-            for result_key in results:
+            for result_key in threads:
                 member = self.species[result_key[0]].members[result_key[1]]
-                member.fitness = results[result_key].get()
+                member.fitness = threads[result_key].result()
 
         self.evolve()
 
         if 'file_name' in kwargs:
             self.save(f"{kwargs['file_name']}")
-            if self.generation in self.settings.save_intervals or \
-                    self.settings.save_model_interval != 0 and self.generation % self.settings.save_model_interval == 0:
-                self.save(f"{kwargs['file_name']}_gen_{self.generation}")
+            self.generation_save(kwargs['file_name'])
 
     def shouldEvolve(self) -> bool:
         """
@@ -342,6 +353,17 @@ class NEAT(object):
         """
         if 'environment_dir' in kwargs:
             self.settings = Settings(kwargs['environment_dir'])
+
+    def generation_save(self, file_name: str) -> None:
+        """
+        Saves a model of current generation if requirements are met.
+        :param file_name: str
+        :return:
+            - None
+        """
+        if self.generation in self.settings.save_intervals or \
+                self.settings.save_model_interval != 0 and self.generation % self.settings.save_model_interval == 0:
+            self.save(f"{file_name}_gen_{self.generation}")
 
     def save(self, file_name: str) -> None:
         """
