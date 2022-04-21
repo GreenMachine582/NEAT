@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import pickle
 
-__version__ = '1.2.2'
-__date__ = '19/03/2022'
+__version__ = '1.2.3'
+__date__ = '21/04/2022'
 
 
 def read(file_dir: str = '') -> Any | None:
@@ -17,19 +18,20 @@ def read(file_dir: str = '') -> Any | None:
         - contents - Any | None
     """
     try:
-        if ".txt" in file_dir:
-            with open(file_dir, 'r') as file:
-                contents = file.readlines()
-        elif ".json" in file_dir:
-            with open(file_dir, 'r') as file:
-                contents = json.load(file)
-        else:
-            with open(file_dir, 'rb') as file:
-                contents = pickle.load(file)
-        return contents
+        if os.path.exists(os.path.dirname(file_dir)):
+            if ".txt" in file_dir:
+                with open(file_dir, 'r') as file:
+                    contents = file.readlines()
+            elif ".json" in file_dir:
+                with open(file_dir, 'r') as file:
+                    contents = json.load(file)
+            else:
+                with open(file_dir, 'rb') as file:
+                    contents = pickle.load(file)
+            return contents
+        return None
     except Exception as e:
         logging.exception(e)
-    return None
 
 
 def write(contents: Any = None, file_dir: str = '') -> None:
