@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-import multiprocessing
 import random
 import sys
 import time
@@ -15,8 +14,8 @@ from neat import NEAT
 import mattslib as ml
 import mattslib.pygame as mlpg
 
-__version__ = '1.6.1'
-__date__ = '20/04/2022'
+__version__ = '1.6.3'
+__date__ = '22/04/2022'
 
 # Constants
 WIDTH, HEIGHT = 1120, 640
@@ -34,7 +33,7 @@ ENVIRONMENT = 'connect4'
 PLAYER_TYPES = ['Human', 'Best', 'Train']
 DIFFICULTY = ['Medium', 'Hard']
 NEAT_INPUTS = {DIFFICULTY[0]: 2, DIFFICULTY[1]: 8}
-SPEEDS = [1, 2, 10, 100, 500]
+SPEEDS = [1, 2, 5, 10]
 SHOW_EVERY = ['Genome', 'Generation', 'None']
 COLOUR_THEMES = ['Light', 'Dark']
 
@@ -47,8 +46,6 @@ MODEL_NAME = "%s_%s"
 players = [{'type': PLAYER_TYPES[2], 'difficulty': DIFFICULTY[0], 'neat': None},
            {'type': PLAYER_TYPES[2], 'difficulty': DIFFICULTY[1], 'neat': None}]
 game_speed = SPEEDS[0]
-evolution_speed = SPEEDS[-1]
-max_fps = max(FPS, max(game_speed, evolution_speed))
 show_every = SHOW_EVERY[1]
 colour_theme = COLOUR_THEMES[1]
 
@@ -66,24 +63,6 @@ options = None
 
 if not os.path.exists(os.path.dirname(MODELS_DIR)):
     os.makedirs(os.path.dirname(MODELS_DIR))
-
-
-def getSpeedShow() -> tuple:
-    """
-    Returns that speed and show values depending on player details.
-    :return:
-        - speed, show - tuple[int, bool]
-    """
-    if players[0]['type'] == PLAYER_TYPES[2] or players[1]['type'] == PLAYER_TYPES[2]:
-        if show_every == SHOW_EVERY[1]:
-            for player_key in range(connect4.MAX_PLAYERS):
-                if players[player_key]['type'] == PLAYER_TYPES[2] and\
-                        players[player_key]['neat'].current_species == players[player_key]['neat'].current_genome == 0:
-                    return game_speed, True
-            return evolution_speed, False
-        elif show_every == SHOW_EVERY[2]:
-            return evolution_speed, False
-    return game_speed, True
 
 
 def getColourTheme() -> dict:
@@ -349,7 +328,6 @@ class Options:
                                                                                    players[player_key]['difficulty'])
 
         gbi['Game Speed:'] = {'selected': game_speed, 'options': SPEEDS}
-        gbi['Evolution Speed:'] = {'selected': evolution_speed, 'options': SPEEDS}
         gbi['Show Every:'] = {'selected': show_every, 'options': SHOW_EVERY}
         for group_key in gbi:
             self.group_buttons[group_key] = mlpg.ButtonGroup(gbi[group_key]['options'],
@@ -373,7 +351,7 @@ class Options:
         :return:
             - continue - bool
         """
-        global players, game_speed, evolution_speed, max_fps, show_every, colour_theme
+        global players, game_speed, show_every, colour_theme
         if mouse_pos is not None:
             for button in self.buttons:
                 action = button.update(mouse_pos, mouse_clicked, text_colour=self.colours['text'])
@@ -381,9 +359,6 @@ class Options:
                     return True
 
         if players[0]['type'] == PLAYER_TYPES[2] or players[1]['type'] == PLAYER_TYPES[2]:
-            if game_speed > evolution_speed:
-                evolution_speed = game_speed
-            self.group_buttons['Evolution Speed:'].update(active=True)
             self.group_buttons['Show Every:'].update(active=True)
 
         if players[0]['difficulty'] == players[1]['difficulty']:
@@ -392,9 +367,7 @@ class Options:
                 players[1]['difficulty'] = DIFFICULTY[1]
 
         if players[0]['type'] != PLAYER_TYPES[2] and players[1]['type'] != PLAYER_TYPES[2]:
-            evolution_speed = SPEEDS[0]
             show_every = SHOW_EVERY[0]
-            self.group_buttons['Evolution Speed:'].update(active=False)
             self.group_buttons['Show Every:'].update(active=False)
         if players[0]['type'] == PLAYER_TYPES[0] or players[1]['type'] == PLAYER_TYPES[0]:
             self.group_buttons['Game Speed:'].update(active=False)
@@ -428,8 +401,6 @@ class Options:
                         setup()
                     elif group == 'Game Speed:':
                         game_speed = SPEEDS[button_key]
-                    elif group == 'Evolution Speed:':
-                        evolution_speed = SPEEDS[button_key] if game_speed <= SPEEDS[button_key] else game_speed
                     elif group == 'Show Every:':
                         show_every = SHOW_EVERY[0]
                         if players[0]['type'] == PLAYER_TYPES[2] or players[1]['type'] == PLAYER_TYPES[2]:
@@ -447,8 +418,6 @@ class Options:
                         network.update(colour_theme=self.colours)
                         info.update(colour_theme=self.colours)
                         menu.update(colour_theme=self.colours)
-
-                    max_fps = max(FPS, max(game_speed, evolution_speed))
 
     def draw(self, surface: Any) -> None:
         """
@@ -513,7 +482,6 @@ def main() -> None:
     while run:
         current_player = connect4.current_player
         player = players[connect4.current_player]
-        speed, show = getSpeedShow()
 
         possible_move = None
         mouse_clicked = False
@@ -549,11 +517,11 @@ def main() -> None:
 
         if connect4.match:
             move = None
-            if player['type'] == PLAYER_TYPES[0]:  # Human move
+            if display and player['type'] == PLAYER_TYPES[0]:  # Human move
                 if possible_move is not None:
                     move = connect4.getPossibleMove(possible_move)
             else:  # NEAT Move
-                if not display or not show or frame_count >= max_fps / speed:
+                if not display or frame_count % int(FPS/game_speed) == 0:
                     if player['type'] == PLAYER_TYPES[2]:
                         if player['neat'].shouldEvolve():
                             results = player['neat'].parallelTest(neatMove, connect4, DIFFICULTY)
@@ -565,7 +533,7 @@ def main() -> None:
                     current_genome = player['neat'].best_specie.representative
                     move = neatMove(current_genome, (connect4, DIFFICULTY))
 
-                    if show and display:
+                    if display:
                         network.generate(current_genome)
                         info.update(player['neat'].getInfo())
 
@@ -580,32 +548,32 @@ def main() -> None:
                     frame_count = 1
 
         if not connect4.match:
-            if not display or not show or frame_count >= max_fps / speed:
+            if not display:
                 gen_str = 'Generation: 1 - %d, 2 - %d'
                 gens = [0, 0]
                 for i, player_key in enumerate([connect4.current_player, connect4.opponent]):
                     if players[player_key]['type'] != PLAYER_TYPES[0]:
                         gens[player_key] = players[player_key]['neat'].generation
-                if not display and show:
+                if not display:
                     print(gen_str % tuple(gens))
+            if not display or frame_count % int(FPS/game_speed) == 0:
                 reset()
 
         if display:
             menu.draw(menu_display)
             display.blit(menu_display, (GAME_PANEL[0], GAME_PANEL[1] - MENU_HEIGHT))
 
-            if show or player['type'] == PLAYER_TYPES[0]:
-                game_board.update(text=f"{connect4.PLAYERS[connect4.current_player]}'s turn!")
-                game_board.draw(game_display)
-                network.draw(network_display)
-                info.draw(info_display)
+            game_board.update(text=f"{connect4.PLAYERS[connect4.current_player]}'s turn!")
+            game_board.draw(game_display)
+            network.draw(network_display)
+            info.draw(info_display)
 
             display.blit(game_display, (0, 0))
             display.blit(network_display, (GAME_PANEL[0], 0))
             display.blit(info_display, (GAME_PANEL[0], NETWORK_BOX[1]))
 
             pg.display.update()
-            clock.tick(max_fps)
+            clock.tick(FPS)
             frame_count += 1
 
 
