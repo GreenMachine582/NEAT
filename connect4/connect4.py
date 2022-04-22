@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 
-__version__ = '1.5.3'
-__date__ = '21/04/2022'
+
+__version__ = '1.5.4'
+__date__ = '22/04/2022'
 
 
 class Connect4:
@@ -152,7 +153,7 @@ class Connect4:
         raw_fitness = {}
         for i in range(self.COLUMNS):
             possible_move = self.getPossibleMove(i)
-            if possible_move != self.INVALID_MOVE:
+            if possible_move[0] != self.INVALID_MOVE:
                 directions = self.getDirectionalSlices(possible_move)
 
                 player_score, opponent_score = 0, 0
