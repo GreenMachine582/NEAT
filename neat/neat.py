@@ -144,14 +144,19 @@ class NEAT(object):
         :return:
             - None
         """
-        threads = {}
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            for result_key in results:
-                threads[result_key] = executor.submit(evaluator, results[result_key], args)
+        if callable(evaluator):
+            threads = {}
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                for result_key in results:
+                    threads[result_key] = executor.submit(evaluator, results[result_key], args)
 
-            for result_key in threads:
+                for result_key in threads:
+                    member = self.species[result_key[0]].members[result_key[1]]
+                    member.fitness = threads[result_key].result()
+        elif isinstance(evaluator, dict):
+            for result_key in results:
                 member = self.species[result_key[0]].members[result_key[1]]
-                member.fitness = threads[result_key].result()
+                member.fitness = evaluator[results[result_key]]
 
         self.evolve()
 
