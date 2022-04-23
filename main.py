@@ -14,8 +14,8 @@ from neat import NEAT
 import mattslib as ml
 import mattslib.pygame as mlpg
 
-__version__ = '1.6.3'
-__date__ = '22/04/2022'
+__version__ = '1.6.4'
+__date__ = '23/04/2022'
 
 # Constants
 WIDTH, HEIGHT = 1120, 640
@@ -526,7 +526,7 @@ def main() -> None:
                         if player['neat'].shouldEvolve():
                             results = player['neat'].parallelTest(neatMove, connect4, DIFFICULTY)
                             file_name = MODEL_NAME % (player['type'], player['difficulty'])
-                            player['neat'].parallelEvolve(connect4.fitnessEvaluation, results, file_name=file_name)
+                            player['neat'].parallelEvolve(connect4.fitnessEvaluation(), results, file_name=file_name)
                         else:
                             return
                         checkBest(current_player)
@@ -549,13 +549,8 @@ def main() -> None:
 
         if not connect4.match:
             if not display:
-                gen_str = 'Generation: 1 - %d, 2 - %d'
-                gens = [0, 0]
-                for i, player_key in enumerate([connect4.current_player, connect4.opponent]):
-                    if players[player_key]['type'] != PLAYER_TYPES[0]:
-                        gens[player_key] = players[player_key]['neat'].generation
-                if not display:
-                    print(gen_str % tuple(gens))
+                print("NEATs: 1 - %d %d, 2 - %d %d" % (players[0]['neat'].generation, len(players[0]['neat'].species),
+                                                       players[1]['neat'].generation, len(players[1]['neat'].species)))
             if not display or frame_count % int(FPS/game_speed) == 0:
                 reset()
 
