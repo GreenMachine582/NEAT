@@ -2,8 +2,8 @@ from __future__ import annotations
 
 
 
-__version__ = '1.5.4'
-__date__ = '22/04/2022'
+__version__ = '1.5.5'
+__date__ = '23/04/2022'
 
 
 class Connect4:
@@ -140,13 +140,13 @@ class Connect4:
         # Draw
         return self.DRAW
 
-    def fitnessEvaluation(self, *args: Any, offset: int = 0.5) -> int:
+    def fitnessEvaluation(self, *args: Any, offset: int = 0.5) -> int | dict:
         """
         Evaluates the fitness score using surrounding connections.
         :param args: Any
         :param offset: int
         :return:
-            - fitness - int
+            - fitness - int | dict[tuple: int]
         """
         move = None if not args else args[0]
 
@@ -172,9 +172,11 @@ class Connect4:
         while raw_fitness:
             score = max(raw_fitness, key=raw_fitness.get)
             for possible_move in raw_fitness[score]:
-                fitness[possible_move] = (self.COLUMNS - len(raw_fitness))
+                fitness[possible_move] = (self.COLUMNS + 1 - len(raw_fitness))
             raw_fitness.pop(score)
-        return fitness[move]
+        if len(args) == 1:
+            return fitness[move]
+        return fitness
 
     def main(self, move: tuple) -> int | None:
         """
