@@ -9,8 +9,8 @@ from .gene import Node, Connection
 import mattslib as ml
 from mattslib.dict import getKeyByWeights
 
-__version__ = '1.4.5'
-__date__ = '14/04/2022'
+__version__ = '1.4.6'
+__date__ = '23/04/2022'
 
 
 class Genome(object):
@@ -76,9 +76,9 @@ class Genome(object):
 
         nodes = {node_key: [] for node_key in self.nodes}
 
-        for pos in self.connections:
-            if self.connections[pos].active:
-                nodes[pos[1]].append(pos[0])
+        active_connections = self.getActiveConnections()
+        for pos in active_connections:
+            nodes[pos[1]].append(pos[0])
 
         genome_nodes = self.getNodeByType(self.LAYER_TYPES[-2:])
         for node_out in genome_nodes[self.LAYER_TYPES[1]] + genome_nodes[self.LAYER_TYPES[2]]:
@@ -116,9 +116,7 @@ class Genome(object):
                 self.removeNode(node_key)
         elif 'connection' in mutation:
             pos = random.choice(list(self.connections))
-            if 'active' in mutation:
-                self.connections[pos].active = not self.connections[pos].active
-            elif 'weight' in mutation:
+            if 'weight' in mutation:
                 if 'set' in mutation:
                     self.connections[pos].weight = random_number
                 elif 'adjust' in mutation:
@@ -144,8 +142,7 @@ class Genome(object):
 
     def addConnection(self, pos: tuple, weight: int | float) -> bool:
         """
-        Activates an existing connection or adds a new connection between
-        given nodes.
+        Adds a new connection between the given nodes.
         :param pos: tuple[int, int]
         :param weight: int | float
         :return:
@@ -153,14 +150,6 @@ class Genome(object):
         """
         pos = self.checkPair(pos)
         if pos is None:
-            return False
-
-        # Activates the existing connection
-        if pos in self.connections:
-            self.connections[pos].active = True
-            return False
-        elif pos[::-1] in self.connections:
-            self.connections[pos[::-1]].active = True
             return False
 
         # Adds the new connection
