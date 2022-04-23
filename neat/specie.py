@@ -6,42 +6,37 @@ import random
 
 import neat
 from .genome import Genome
-from mattslib.dict import sortIntoDict
-from mattslib.math_util import mean
+from mattslib.dict import countOccurrence, sortIntoDict
+from mattslib.math_util import mean, euclideanDistance
 
-__version__ = '1.4.8'
-__date__ = '19/04/2022'
+__version__ = '1.4.9'
+__date__ = '23/04/2022'
 
 
 def genomicDistance(x_member: Genome, y_member: Genome, distance_weights: dict) -> float:
     """
-    Calculates the distance between two genomes by summing the weighted genes differences.
+    Calculates an estimated distance between two genomes using the Euclidean distance formular.
     :param x_member: Genome
     :param y_member: Genome
-    :param distance_weights: dict[str: int | float]
+    :param distance_weights: dict[str: float]
     :return:
         - distance - float
     """
     genomic_distance = 0.0
 
-    genomic_distance += distance_weights['node'] * (abs(x_member.total_nodes - y_member.total_nodes) /
-                                                    max(x_member.total_nodes, y_member.total_nodes))
-    genomic_distance += distance_weights['connection'] * (abs(x_member.total_connections - y_member.total_connections) /
-                                                          max(x_member.total_connections, y_member.total_connections))
+    genomic_distance += distance_weights['node'] * euclideanDistance(x_member.total_nodes, y_member.total_nodes)
+    genomic_distance += distance_weights['connection'] * euclideanDistance(x_member.total_connections,
+                                                                           y_member.total_connections)
 
-    weight_diff = 0
-    for pos in x_member.connections:
-        weight_diff += x_member.connections[pos].weight
-    for pos in y_member.connections:
-        weight_diff -= y_member.connections[pos].weight
-    genomic_distance += distance_weights['weight'] * abs(weight_diff)
+    counts = countOccurrence(list(x_member.connections) + list(y_member.connections))
+    matching_connections = [pos for pos in counts if counts[pos] == 2]
+    x_weight = [x_member.connections[pos].weight for pos in x_member.connections if pos in matching_connections]
+    y_weight = [y_member.connections[pos].weight for pos in y_member.connections if pos in matching_connections]
+    genomic_distance += distance_weights['weight'] * euclideanDistance(x_weight, y_weight)
 
-    bias_diff = 0
-    for node_key in x_member.nodes:
-        bias_diff += x_member.nodes[node_key].bias
-    for node_key in y_member.nodes:
-        bias_diff -= y_member.nodes[node_key].bias
-    genomic_distance += distance_weights['bias'] * abs(bias_diff)
+    x_bias = [x_member.nodes[node_key].bias for node_key in x_member.nodes]
+    y_bias = [y_member.nodes[node_key].bias for node_key in y_member.nodes]
+    genomic_distance += distance_weights['bias'] * euclideanDistance(sorted(x_bias), sorted(y_bias))
     return round(genomic_distance, 7)
 
 
