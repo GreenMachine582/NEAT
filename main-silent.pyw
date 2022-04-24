@@ -140,7 +140,7 @@ def neatMove(genome: Genome, args: Any = None) -> tuple:
             possible_moves[possible_move] = 0
     input_range = {'max': max(c4.ROWS, c4.COLUMNS), 'min': 0}
     for possible_move in possible_moves:
-        if genome.inputs == difficulty[0]:
+        if genome.inputs == NEAT_INPUTS[difficulty[0]]:
             inputs = {}
             directions = c4.getDirectionalSlices(possible_move)
             for player_key in player_ids:
@@ -153,7 +153,7 @@ def neatMove(genome: Genome, args: Any = None) -> tuple:
                     inputs[direction_pair].append(normalized_input)
             for direction_pair in inputs:
                 possible_moves[possible_move] += sum(genome.forward(inputs[direction_pair]))
-        elif genome.inputs == difficulty[1]:
+        elif genome.inputs == NEAT_INPUTS[difficulty[1]]:
             inputs = []
             directions = c4.getDirectionalSlices(possible_move)
             for player_key in player_ids:
