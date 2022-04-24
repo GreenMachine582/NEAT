@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from math import inf
 
 
 __version__ = '1.5.5'
@@ -140,11 +141,12 @@ class Connect4:
         # Draw
         return self.DRAW
 
-    def fitnessEvaluation(self, *args: Any, offset: int = 0.5) -> int | dict:
+    def fitnessEvaluation(self, *args: Any, offset: int = 0.5, minimax: bool = False) -> int | dict:
         """
         Evaluates the fitness score using surrounding connections.
         :param args: Any
         :param offset: int
+        :param minimax: bool
         :return:
             - fitness - int | dict[tuple: int]
         """
@@ -153,16 +155,19 @@ class Connect4:
         for i in range(self.COLUMNS):
             possible_move = self.getPossibleMove(i)
             if possible_move[0] != self.INVALID_MOVE:
-                directions = self.getDirectionalSlices(possible_move)
-
-                player_score, opponent_score = 0, 0
-                player_counts = self.getConnectionCounts(directions, self.current_player, immediate_only=False)
-                opponent_counts = self.getConnectionCounts(directions, self.opponent, immediate_only=False)
-                for direction_pair in player_counts:
-                    player_score = max(min(sum(player_counts[direction_pair]) + 1, self.LENGTH), player_score)
-                    opponent_score = max(min(sum(opponent_counts[direction_pair]) + 1, self.LENGTH), opponent_score)
-
-                score = max(player_score + offset, opponent_score)
+                if minimax:
+                    self.board[possible_move[0]][j] = self.current_player
+                    score = self.minimax(possible_move, self.opponent, self.current_player, max_depth=8)
+                    self.board[possible_move[0]][j] = self.EMPTY
+                else:
+                    player_score, opponent_score = 0, 0
+                    directions = self.getDirectionalSlices(possible_move)
+                    player_counts = self.getConnectionCounts(directions, self.current_player, immediate_only=False)
+                    opponent_counts = self.getConnectionCounts(directions, self.opponent, immediate_only=False)
+                    for direction_pair in player_counts:
+                        player_score = max(min(sum(player_counts[direction_pair]) + 1, self.LENGTH), player_score)
+                        opponent_score = max(min(sum(opponent_counts[direction_pair]) + 1, self.LENGTH), opponent_score)
+                    score = max(player_score + offset, opponent_score)
                 if score not in raw_fitness:
                     raw_fitness[score] = []
                 raw_fitness[score].append(possible_move)
@@ -175,6 +180,50 @@ class Connect4:
         if len(args) == 1:
             return fitness[move]
         return fitness
+
+    def minimax(self, move: tuple, maxi_piece: int, mini_piece: int, depth: int = 0, maximizing: bool = True,
+                alpha: int = -inf, beta: int = inf, max_depth: int = 4):
+        """
+        Minimax is a search algorithm that finds a score of minimal possible loss
+        for the worst case scenario.
+        :param move: tuple[int, int]
+        :param maxi_piece: int
+        :param mini_piece: int
+        :param depth: int
+        :param maximizing: bool
+        :param alpha: int
+        :param beta: int
+        :param max_depth: int
+        :return:
+            - score - int
+        """
+        result = self.getBoardStatus(move)
+        score = None
+        if result == self.WIN:
+            score = (1 + depth) if maximizing else -(1 + depth)
+        elif result == self.DRAW:
+            score = 0
+        if score is not None:
+            return score
+
+        best_score = -inf if maximizing else inf
+        if max_depth == 0 or depth < max_depth:
+            for j in range(self.COLUMNS):
+                possible_move = self.getPossibleMove(j)
+                if possible_move[0] != self.INVALID_MOVE:
+                    self.board[possible_move[0]][j] = maxi_piece if maximizing else mini_piece
+                    score = self.minimax(possible_move, maxi_piece, mini_piece, depth+1, not maximizing, alpha, beta,
+                                         max_depth)
+                    self.board[possible_move[0]][j] = self.EMPTY
+                    if maximizing:
+                        best_score = max(best_score, score)
+                        alpha = max(alpha, best_score)
+                    else:
+                        best_score = min(best_score, score)
+                        beta = min(beta, best_score)
+                    if beta <= alpha:
+                        break
+        return best_score
 
     def main(self, move: tuple) -> int | None:
         """
