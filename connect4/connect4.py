@@ -3,7 +3,7 @@ from __future__ import annotations
 
 
 __version__ = '1.5.5'
-__date__ = '23/04/2022'
+__date__ = '24/04/2022'
 
 
 class Connect4:
@@ -149,7 +149,6 @@ class Connect4:
             - fitness - int | dict[tuple: int]
         """
         move = None if not args else args[0]
-
         raw_fitness = {}
         for i in range(self.COLUMNS):
             possible_move = self.getPossibleMove(i)
@@ -167,7 +166,6 @@ class Connect4:
                 if score not in raw_fitness:
                     raw_fitness[score] = []
                 raw_fitness[score].append(possible_move)
-
         fitness = {}
         while raw_fitness:
             score = max(raw_fitness, key=raw_fitness.get)

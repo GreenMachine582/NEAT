@@ -11,7 +11,7 @@ from mattslib.dict import countOccurrence, getKeyByWeights
 from mattslib.file import read, write
 
 __version__ = '1.5.2'
-__date__ = '21/04/2022'
+__date__ = '24/04/2022'
 
 
 def genomicCrossover(x_member: Genome, y_member: Genome) -> Genome:
@@ -111,7 +111,7 @@ class NEAT(object):
                 self.evolve()
                 self.current_species = 0
                 self.save(f"{file_name}")
-                self.generation_save(file_name)
+                self.generationSave(file_name)
                 return True
         return False
 
@@ -162,7 +162,7 @@ class NEAT(object):
 
         if 'file_name' in kwargs:
             self.save(f"{kwargs['file_name']}")
-            self.generation_save(kwargs['file_name'])
+            self.generationSave(kwargs['file_name'])
 
     def shouldEvolve(self) -> bool:
         """
@@ -359,7 +359,7 @@ class NEAT(object):
         if 'environment_dir' in kwargs:
             self.settings = Settings(kwargs['environment_dir'])
 
-    def generation_save(self, file_name: str) -> None:
+    def generationSave(self, file_name: str) -> None:
         """
         Saves a model of current generation if requirements are met.
         :param file_name: str

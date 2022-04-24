@@ -1,7 +1,7 @@
 {
     "save_intervals": [],
     "save_model_interval": 0,
-    "delta_genome_threshold": 0.60,
+    "delta_genome_threshold": 0.9,
     "distance_weights": {
         "node": 0.35,
         "connection": 0.3,
@@ -19,7 +19,7 @@
     },
     "max_fitness": 0,
     "max_generations": 0,
-    "max_fitness_history": 30,
+    "max_fitness_history": 25,
     "kill": 0.7,
     "remove_duplicate_interval": 50,
     "duplicate_distance_threshold": 0.0001,
