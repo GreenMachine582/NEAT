@@ -14,8 +14,8 @@ from neat import NEAT
 import mattslib as ml
 import mattslib.pygame as mlpg
 
-__version__ = '1.6.4'
-__date__ = '23/04/2022'
+__version__ = '1.6.5'
+__date__ = '24/04/2022'
 
 # Constants
 WIDTH, HEIGHT = 1120, 640
@@ -33,8 +33,8 @@ ENVIRONMENT = 'connect4'
 PLAYER_TYPES = ['Human', 'Best', 'Train']
 DIFFICULTY = ['Medium', 'Hard']
 NEAT_INPUTS = {DIFFICULTY[0]: 2, DIFFICULTY[1]: 8}
-SPEEDS = [1, 2, 5, 10]
-SHOW_EVERY = ['Genome', 'Generation', 'None']
+SPEEDS = [1, 2, 5, 10, 40]
+SHOW_EVERY = ['Genome', 'Generation']
 COLOUR_THEMES = ['Light', 'Dark']
 
 ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -367,12 +367,13 @@ class Options:
                 players[1]['difficulty'] = DIFFICULTY[1]
 
         if players[0]['type'] != PLAYER_TYPES[2] and players[1]['type'] != PLAYER_TYPES[2]:
-            show_every = SHOW_EVERY[0]
             self.group_buttons['Show Every:'].update(active=False)
         if players[0]['type'] == PLAYER_TYPES[0] or players[1]['type'] == PLAYER_TYPES[0]:
-            self.group_buttons['Game Speed:'].update(active=False)
             game_speed = SPEEDS[0]
+            self.group_buttons['Game Speed:'].selected = game_speed
+            self.group_buttons['Game Speed:'].update(active=False)
         else:
+            self.group_buttons['Game Speed:'].selected = game_speed
             self.group_buttons['Game Speed:'].update(active=True)
 
         if players[0]['type'] == PLAYER_TYPES[0]:
@@ -516,28 +517,38 @@ def main() -> None:
             menu.update(mouse_pos, mouse_clicked)
 
         if connect4.match:
-            move = None
+            move = connect4.INVALID_MOVE
             if display and player['type'] == PLAYER_TYPES[0]:  # Human move
                 if possible_move is not None:
                     move = connect4.getPossibleMove(possible_move)
             else:  # NEAT Move
                 if not display or frame_count % int(FPS/game_speed) == 0:
+                    current_genome = None
+                    if show_every == SHOW_EVERY[1] or player['type'] == PLAYER_TYPES[1]:
+                        current_genome = player['neat'].best_specie.representative
+                    elif show_every == SHOW_EVERY[0]:
+                        current_genome = player['neat'].getGenome()
+
                     if player['type'] == PLAYER_TYPES[2]:
                         if player['neat'].shouldEvolve():
-                            results = player['neat'].parallelTest(neatMove, connect4, DIFFICULTY)
                             file_name = MODEL_NAME % (player['type'], player['difficulty'])
-                            player['neat'].parallelEvolve(connect4.fitnessEvaluation(), results, file_name=file_name)
+                            if show_every == SHOW_EVERY[0]:
+                                player['neat'].nextGenome(file_name)
+                            elif show_every == SHOW_EVERY[1]:
+                                results = player['neat'].parallelTest(neatMove, connect4, DIFFICULTY)
+                                player['neat'].parallelEvolve(connect4.fitnessEvaluation(), results,
+                                                              file_name=file_name)
                         else:
                             return
                         checkBest(current_player)
-                    current_genome = player['neat'].best_specie.representative
+
                     move = neatMove(current_genome, (connect4, DIFFICULTY))
 
                     if display:
                         network.generate(current_genome)
                         info.update(player['neat'].getInfo())
 
-            if move is not None and move != connect4.INVALID_MOVE:
+            if move != connect4.INVALID_MOVE:
                 result = connect4.main(move)
                 if display:
                     game_board.update(move=move, player=current_player)
