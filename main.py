@@ -43,8 +43,8 @@ MODELS_DIR = f"{ENVIRONMENT_DIR}\\models\\"
 MODEL_NAME = "%s_%s"
 
 # Globals - Defaults
-players = [{'type': PLAYER_TYPES[2], 'difficulty': DIFFICULTY[0], 'neat': None},
-           {'type': PLAYER_TYPES[2], 'difficulty': DIFFICULTY[1], 'neat': None}]
+players = [{'type': PLAYER_TYPES[2], 'difficulty': DIFFICULTY[1], 'neat': None},
+           {'type': PLAYER_TYPES[1], 'difficulty': DIFFICULTY[1], 'neat': None}]
 game_speed = SPEEDS[0]
 show_every = SHOW_EVERY[1]
 colour_theme = COLOUR_THEMES[1]
