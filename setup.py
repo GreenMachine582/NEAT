@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='NEAT',
-    version='1.5',
+    version='1.6.2',
     author='Matthew Johnson',
     author_email='greenmachine1902@gmail.com',
     url='https://github.com/GreenMachine582/NEAT',

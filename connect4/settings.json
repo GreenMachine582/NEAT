@@ -1,11 +1,11 @@
 {
     "save_intervals": [],
     "save_model_interval": 0,
-    "delta_genome_threshold": 1,
+    "delta_genome_threshold": 0.88,
     "distance_weights": {
-        "node": 0.35,
-        "connection": 0.3,
-        "weight": 0.4,
+        "node": 0.3,
+        "connection": 0.28,
+        "weight": 0.38,
         "bias": 0.1
     },
     "node_info": {
