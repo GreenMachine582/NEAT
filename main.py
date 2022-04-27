@@ -14,8 +14,8 @@ from neat import NEAT
 import mattslib as ml
 import mattslib.pygame as mlpg
 
-__version__ = '1.6.5'
-__date__ = '24/04/2022'
+__version__ = '1.6.6'
+__date__ = '27/04/2022'
 
 # Constants
 WIDTH, HEIGHT = 1120, 640
@@ -28,6 +28,7 @@ OPTION_WIDTH, OPTION_HEIGHT = WIDTH, HEIGHT
 
 FPS = 40
 display = False
+overwrite = False
 
 ENVIRONMENT = 'connect4'
 PLAYER_TYPES = ['Human', 'Best', 'Train']
@@ -40,18 +41,13 @@ COLOUR_THEMES = ['Light', 'Dark']
 ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
 ENVIRONMENT_DIR = f"{ROOT_DIR}\\{ENVIRONMENT}"
 MODELS_DIR = f"{ENVIRONMENT_DIR}\\models\\"
-MODEL_NAME = "%s_%s"
 
 # Globals - Defaults
-players = [{'type': PLAYER_TYPES[2], 'difficulty': DIFFICULTY[1], 'neat': None},
-           {'type': PLAYER_TYPES[1], 'difficulty': DIFFICULTY[1], 'neat': None}]
+players = [{'type': PLAYER_TYPES[2], 'difficulty': DIFFICULTY[0], 'neat': None},
+           {'type': PLAYER_TYPES[2], 'difficulty': DIFFICULTY[1], 'neat': None}]
 game_speed = SPEEDS[0]
 show_every = SHOW_EVERY[1]
 colour_theme = COLOUR_THEMES[1]
-
-# Pygame
-os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
-os.environ['SDL_VIDEO_WINDOW_POS'] = "0,30"
 
 # Global - objects
 connect4 = None
@@ -60,6 +56,10 @@ network = None
 info = None
 menu = None
 options = None
+
+# Pygame
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
+os.environ['SDL_VIDEO_WINDOW_POS'] = "0,30"
 
 if not os.path.exists(os.path.dirname(MODELS_DIR)):
     os.makedirs(os.path.dirname(MODELS_DIR))
@@ -81,23 +81,23 @@ def getColourTheme() -> dict:
     return colours
 
 
-def setupAi(current_player: dict, outputs: int = 1, population: int = 100) -> NEAT:
+def setupAi(player: dict, outputs: int = 1, population: int = 10) -> NEAT:
     """
     Sets up neat with game settings in mind.
-    :param current_player: dict[str: Any]
+    :param player: dict[str: Any]
     :param outputs: int
     :param population: int
     :return:
         - neat - NEAT
     """
-    file = MODELS_DIR + MODEL_NAME % (current_player['type'], current_player['difficulty'])
-    if os.path.isfile(file + '.neat'):
+    file = f"{MODELS_DIR}{player['type']}_{player['difficulty']}"
+    if os.path.isfile(file + '.neat') and not overwrite:
         neat = NEAT.load(file)
     else:
-        neat = NEAT(ENVIRONMENT_DIR)
-        inputs = NEAT_INPUTS[current_player['difficulty']]
+        neat = NEAT(ENVIRONMENT_DIR, file_name=f"{player['type']}_{player['difficulty']}")
+        inputs = NEAT_INPUTS[player['difficulty']]
         neat.generate(inputs, outputs, population=population)
-        neat.save(MODEL_NAME % (current_player['type'], current_player['difficulty']))
+        neat.save()
     return neat
 
 
@@ -114,13 +114,13 @@ def setup() -> None:
         game_board = visualize.GameBoard(GAME_PANEL, connect4.ROWS, connect4.COLUMNS, colour_theme=colours)
         network = visualize.Network(NETWORK_BOX, colour_theme=colours)
         info = visualize.Info(INFO_BOX, colour_theme=colours)
-        options = Options(colour_theme=colours)
-        menu = Menu(colour_theme=colours)
+        options = Options()
+        menu = Menu()
     for player_key in range(connect4.MAX_PLAYERS):
-        current_player = players[player_key]
+        player = players[player_key]
         players[player_key]['neat'] = None
-        if current_player['type'] != PLAYER_TYPES[0]:
-            players[player_key]['neat'] = setupAi(current_player)
+        if player['type'] != PLAYER_TYPES[0]:
+            players[player_key]['neat'] = setupAi(player)
 
 
 def neatMove(genome: Genome, args: Any = None) -> tuple:
@@ -168,13 +168,13 @@ def neatMove(genome: Genome, args: Any = None) -> tuple:
     return random.choice(sorted_moves[max_min_keys['max']['value']])
 
 
-def checkBest(player_key: int, match_range: int = 100, win_threshold: float = 0.15) -> None:
+def checkBest(player_key: int, total_matches: int = 100, success_rate: float = 0.2) -> None:
     """
     Update the best neat for each difficulty depending on win rate with current
     trained neat.
     :param player_key: int
-    :param match_range: int
-    :param win_threshold: float
+    :param total_matches: int
+    :param success_rate: float
     :return:
         - None
     """
@@ -186,20 +186,26 @@ def checkBest(player_key: int, match_range: int = 100, win_threshold: float = 0.
     players[opponent]['neat'] = setupAi(players[opponent])
     c4 = Connect4()
 
-    win_count = 0
-    for _ in range(match_range):
+    lose_count, draw_count, win_count = 0, 0, 0
+    for _ in range(total_matches):
         while c4.match:
             current_player = players[c4.current_player]
             best_genome = current_player['neat'].best_specie.representative
             possible_move = neatMove(best_genome, (c4, DIFFICULTY))
-            if c4.main(possible_move) == c4.WIN:
-                win_count += 1 if c4.current_player == player_key else -1
+            result = c4.main(possible_move)
+            if result == c4.WIN:
+                if c4.current_player == player_key:
+                    win_count += 1
+                else:
+                    lose_count += 1
+            elif result == c4.DRAW:
+                draw_count += 1
         c4.reset()
 
-    if (win_count / match_range) >= win_threshold:
+    if win_count - lose_count >= total_matches * success_rate:
         print(f"New Best {players[player_key]['difficulty']} NEAT Gen[{players[player_key]['neat'].generation}]"
-              f" (win rate): {round(win_count / match_range * 100, 2):2}%")
-        players[player_key]['neat'].save(MODEL_NAME % (PLAYER_TYPES[1], players[player_key]['difficulty']))
+              f" (l-d-w): {lose_count}-{draw_count}-{win_count} {round((win_count - lose_count) / total_matches * 100, 2):2}%")
+        players[player_key]['neat'].save(f"{players[opponent]['type']}_{players[opponent]['difficulty']}")
 
     players[opponent] = temp_opponent
     if players[opponent]['type'] != PLAYER_TYPES[0]:
@@ -217,14 +223,14 @@ def reset(args: Any = None):
 
 def close() -> None:
     """
-    Closes pygame and python in a safe manner.
+    Closes pygame and python after cleaning in a safe manner.
     :return:
         - None
     """
     pg.quit()
-    print(f"Thanks for using NEAT with C4")
-    time.sleep(1)
-    sys.exit()
+    print(f"Cleaning processes...")
+    time.sleep(3)
+    sys.exit('Thanks for using NEAT with Connect 4')
 
 
 class Menu:
@@ -234,24 +240,23 @@ class Menu:
 
     BOARDER = 30
 
-    def __init__(self, **kwargs: Any):
+    def __init__(self):
         """
         Initiates the object with required values.
-        :param kwargs: Any
         """
         self.colours = getColourTheme()
 
-        self.buttons = [
-            mlpg.Button("Reset", (MENU_WIDTH * (1 / 3), MENU_HEIGHT * (1 / 3)), self.colours['button'],
-                        handler=reset, args=(False,)),
-            mlpg.Button("Options", (MENU_WIDTH * (2 / 3), MENU_HEIGHT * (1 / 3)), self.colours['button'],
-                        handler=options.main),
-            mlpg.Button("Swap Turn", (MENU_WIDTH * (1 / 3), MENU_HEIGHT * (2 / 3)), self.colours['button'],
-                        handler=reset),
-            mlpg.Button("QUIT", (MENU_WIDTH * (2 / 3), MENU_HEIGHT * (2 / 3)), self.colours['button'],
-                        handler=close)]
-
-        self.update(kwargs=kwargs)
+        self.buttons = [mlpg.Button("Reset", (MENU_WIDTH * (1 / 3), MENU_HEIGHT * (1 / 3)), self.colours['button'],
+                                    handler=reset, args=(False,)),
+                        mlpg.Button("Options", (MENU_WIDTH * (2 / 3), MENU_HEIGHT * (1 / 3)), self.colours['button'],
+                                    handler=options.main),
+                        mlpg.Button("Swap Turn", (MENU_WIDTH * (1 / 3), MENU_HEIGHT * (2 / 3)), self.colours['button'],
+                                    handler=reset),
+                        mlpg.Button("QUIT", (MENU_WIDTH * (2 / 3), MENU_HEIGHT * (2 / 3)), self.colours['button'],
+                                    handler=close)]
+        for button in self.buttons:
+            button.update(text_colour=self.colours['text'])
+        self.update()
 
     def update(self, *args: Any, **kwargs: Any) -> None:
         """
@@ -290,10 +295,9 @@ class Options:
     """
     BOARDER = 60
 
-    def __init__(self, **kwargs: Any):
+    def __init__(self):
         """
         Initiates the object with required values.
-        :param kwargs: Any
         """
         self.colours = getColourTheme()
 
@@ -303,7 +307,7 @@ class Options:
         self.messages = []
 
         self.generate()
-        self.update(kwargs=kwargs)
+        self.update()
 
     def generate(self) -> None:
         """
@@ -323,7 +327,7 @@ class Options:
             self.group_buttons[f"Difficulty {player_key + 1}:"] = mlpg.ButtonGroup(DIFFICULTY,
                                                                                    (self.BOARDER + ((OPTION_WIDTH *
                                                                                                     (1 / 6)) + 520),
-                                                                                    self.BOARDER + (player_key * 90)),
+                                                                                    self.BOARDER + 80 + (player_key * 90)),
                                                                                    self.colours,
                                                                                    players[player_key]['difficulty'])
 
@@ -332,14 +336,14 @@ class Options:
         for group_key in gbi:
             self.group_buttons[group_key] = mlpg.ButtonGroup(gbi[group_key]['options'],
                                                              (self.BOARDER + (OPTION_WIDTH * (1 / 6) + 100),
-                                                              self.BOARDER + (len(self.messages) * 90)),
+                                                              self.BOARDER + 80 + (len(self.messages) * 90)),
                                                              self.colours, gbi[group_key]['selected'])
             self.messages.append(mlpg.Message(group_key, (self.BOARDER + (OPTION_WIDTH * (1 / 6)),
-                                                          self.BOARDER + (len(self.messages) * 90)),
+                                                          self.BOARDER + 80 + (len(self.messages) * 90)),
                                               self.colours['text'], align='mr'))
         self.group_buttons[f"Colour Theme:"] = mlpg.ButtonGroup(COLOUR_THEMES,
                                                                 (self.BOARDER + ((OPTION_WIDTH * (1 / 6)) + 520),
-                                                                 self.BOARDER + ((len(self.messages) - 1) * 90)),
+                                                                 self.BOARDER + 80 + ((len(self.messages) - 1) * 90)),
                                                                 self.colours, colour_theme)
 
     def update(self, mouse_pos: tuple = None, mouse_clicked: bool = False, **kwargs: Any) -> bool:
@@ -419,6 +423,13 @@ class Options:
                         network.update(colour_theme=self.colours)
                         info.update(colour_theme=self.colours)
                         menu.update(colour_theme=self.colours)
+
+        if 'kwargs' in kwargs:
+            kwargs = kwargs['kwargs']
+        if 'colour_theme' in kwargs:
+            self.colours = kwargs['colour_theme']
+            for button in self.buttons:
+                button.update(colour=self.colours['button'], text_colour=self.colours['text'])
 
     def draw(self, surface: Any) -> None:
         """
@@ -531,13 +542,11 @@ def main() -> None:
 
                     if player['type'] == PLAYER_TYPES[2]:
                         if player['neat'].shouldEvolve():
-                            file_name = MODEL_NAME % (player['type'], player['difficulty'])
                             if show_every == SHOW_EVERY[0]:
-                                player['neat'].nextGenome(file_name)
+                                player['neat'].nextGenome()
                             elif show_every == SHOW_EVERY[1]:
                                 results = player['neat'].parallelTest(neatMove, connect4, DIFFICULTY)
-                                player['neat'].parallelEvolve(connect4.fitnessEvaluation(), results,
-                                                              file_name=file_name)
+                                player['neat'].parallelEvolve(connect4.fitnessEvaluation(), results)
                         else:
                             return
                         checkBest(current_player)
@@ -596,9 +605,9 @@ if __name__ == '__main__':
         options_display = pg.Surface((OPTION_WIDTH, OPTION_HEIGHT))
         display.fill(mlpg.BLACK)
         clock = pg.time.Clock()
-    try:
-        main()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        close()
+    main()
+    # try:
+    #     main()
+    # except KeyboardInterrupt:
+    #     pass
+    # raise close()

@@ -10,8 +10,8 @@ from .specie import Specie, genomicDistance
 from mattslib.dict import countOccurrence, getKeyByWeights
 from mattslib.file import read, write
 
-__version__ = '1.5.2'
-__date__ = '24/04/2022'
+__version__ = '1.5.4'
+__date__ = '27/04/2022'
 
 
 def genomicCrossover(x_member: Genome, y_member: Genome) -> Genome:
@@ -47,17 +47,19 @@ def genomicCrossover(x_member: Genome, y_member: Genome) -> Genome:
 class NEAT(object):
     """
     NEAT (NeuroEvolution of Augmenting Topologies) is a genetic algorithm
-     that evolves neural networks. The neural networks are seen as genomes
-     and its parameters and attributes are evolved as genes.
+    that evolves neural networks. The neural networks are seen as genomes
+    and its parameters and attributes are evolved as genes.
     """
 
-    def __init__(self, environment_dir: str):
+    def __init__(self, environment_dir: str, file_name: str = ''):
         """
         Initiates the NEAT object with default and given values.
         :param environment_dir: str
+        :param file_name: str
         """
         self.settings = Settings(environment_dir)
         self.file_dir = environment_dir + '\\models\\'
+        self.file_name = file_name
         self.inputs = 0
         self.outputs = 0
 
@@ -93,11 +95,10 @@ class NEAT(object):
         self.best_specie = self.species[0]
         self.best_genome = self.species[0].members[0]
 
-    def nextGenome(self, file_name: str) -> bool:
+    def nextGenome(self) -> bool:
         """
         Gets the next genome in population, updates counters and
         saves models at certain intervals.
-        :param file_name: str
         :return:
             - new_generation - bool
         """
@@ -110,8 +111,8 @@ class NEAT(object):
             else:
                 self.evolve()
                 self.current_species = 0
-                self.save(f"{file_name}")
-                self.generationSave(file_name)
+                self.save()
+                self.generationSave()
                 return True
         return False
 
@@ -124,6 +125,7 @@ class NEAT(object):
         :return:
             - results - dict[tuple: float]
         """
+        self.current_genome, self.current_species = 0, 0
         threads, results = {}, {}
         with concurrent.futures.ThreadPoolExecutor() as executor:
             for specie_key, specie in enumerate(self.species):
@@ -133,17 +135,17 @@ class NEAT(object):
                 results[result_key] = threads[result_key].result()
         return results
 
-    def parallelEvolve(self, evaluator: Any, results: dict, *args: Any, **kwargs: Any) -> None:
+    def parallelEvolve(self, evaluator: Any, results: dict, *args: Any) -> None:
         """
         Evaluates the whole population using multithreading techniques and then
         evolves to form the next generation.
         :param evaluator: Any
         :param results: dict[tuple: tuple]
         :param args: Any
-        :param kwargs: Any
         :return:
             - None
         """
+        self.current_genome, self.current_species = 0, 0
         if callable(evaluator):
             threads = {}
             with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -160,9 +162,8 @@ class NEAT(object):
 
         self.evolve()
 
-        if 'file_name' in kwargs:
-            self.save(f"{kwargs['file_name']}")
-            self.generationSave(kwargs['file_name'])
+        self.save()
+        self.generationSave()
 
     def shouldEvolve(self) -> bool:
         """
@@ -252,8 +253,8 @@ class NEAT(object):
 
         # Introduces new species and genomes if populace is not restored
         for p in range(self.population - self.getPopulation()):
-            genome = deepcopy(self.best_genome) if p % 3 == 0 else Genome(self.inputs, self.outputs,
-                                                                          self.settings.node_info)
+            genome = deepcopy(self.best_specie.representative) if p % 3 == 0 else Genome(self.inputs, self.outputs,
+                                                                                         self.settings.node_info)
             genome.mutate(self.settings.mutation_probabilities)
             self.classifyGenome(genome)
 
@@ -344,7 +345,7 @@ class NEAT(object):
         :return:
             - neat_info - dict[str: int | float]
         """
-        neat_info = {'generation': self.generation+1, 'current_species': self.current_species+1,
+        neat_info = {'generation': self.generation, 'current_species': self.current_species+1,
                      'current_genome': self.current_genome+1, 'fitness': self.getGenome().fitness}
         return neat_info
 
@@ -359,24 +360,24 @@ class NEAT(object):
         if 'environment_dir' in kwargs:
             self.settings = Settings(kwargs['environment_dir'])
 
-    def generationSave(self, file_name: str) -> None:
+    def generationSave(self) -> None:
         """
         Saves a model of current generation if requirements are met.
-        :param file_name: str
         :return:
             - None
         """
         if self.generation in self.settings.save_intervals or \
                 self.settings.save_model_interval != 0 and self.generation % self.settings.save_model_interval == 0:
-            self.save(f"{file_name}_gen_{self.generation}")
+            self.save(f"{self.file_name}_gen_{self.generation}")
 
-    def save(self, file_name: str) -> None:
+    def save(self, file_name: str = None) -> None:
         """
         Saves the NEAT object by writing to file.
         :param file_name: str
         :return:
             - None
         """
+        file_name = file_name if file_name is not None else self.file_name
         write(self, self.file_dir + file_name + '.neat')
 
     @staticmethod

@@ -9,8 +9,8 @@ from .genome import Genome
 from mattslib.dict import countOccurrence, sortIntoDict
 from mattslib.math_util import mean, euclideanDistance, brayCurtisIndividualDistance
 
-__version__ = '1.4.10'
-__date__ = '24/04/2022'
+__version__ = '1.4.11'
+__date__ = '27/04/2022'
 
 
 def genomicDistance(x_member: Genome, y_member: Genome, distance_weights: dict) -> float:
@@ -32,11 +32,11 @@ def genomicDistance(x_member: Genome, y_member: Genome, distance_weights: dict) 
     matching_connections = [pos for pos in counts if counts[pos] == 2]
     x_weight = [x_member.connections[pos].weight for pos in x_member.connections if pos in matching_connections]
     y_weight = [y_member.connections[pos].weight for pos in y_member.connections if pos in matching_connections]
-    genomic_distance += distance_weights['weight'] * brayCurtisIndividualDistance(x_weight, y_weight)
+    genomic_distance += distance_weights['weight'] * abs(euclideanDistance(x_weight, y_weight))
 
     x_bias = [x_member.nodes[node_key].bias for node_key in x_member.nodes]
     y_bias = [y_member.nodes[node_key].bias for node_key in y_member.nodes]
-    genomic_distance += distance_weights['bias'] * brayCurtisIndividualDistance(sorted(x_bias), sorted(y_bias))
+    genomic_distance += distance_weights['bias'] * abs(euclideanDistance(x_bias, y_bias))
     return round(genomic_distance, 7)
 
 

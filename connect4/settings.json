@@ -1,11 +1,11 @@
 {
     "save_intervals": [],
     "save_model_interval": 0,
-    "delta_genome_threshold": 0.87,
+    "delta_genome_threshold": 1,
     "distance_weights": {
-        "node": 0.3,
-        "connection": 0.28,
-        "weight": 0.38,
+        "node": 0.2,
+        "connection": 0.2,
+        "weight": 0.15,
         "bias": 0.1
     },
     "node_info": {
@@ -19,7 +19,7 @@
     },
     "max_fitness": 0,
     "max_generations": 0,
-    "max_fitness_history": 30,
+    "max_fitness_history": 10,
     "kill": 0.7,
     "remove_duplicate_interval": 50,
     "duplicate_distance_threshold": 0.0001,
@@ -35,11 +35,11 @@
     },
     "mutation_probabilities": {
         "node_activation": 0.1,
-        "node_bias_adjust": 0.3,
-        "node_bias_set": 0.1,
+        "node_bias_adjust": 0.45,
+        "node_bias_set": 0.25,
         "connection_active": 0.01,
-        "connection_weight_adjust": 0.5,
-        "connection_weight_set": 0.2,
+        "connection_weight_adjust": 0.65,
+        "connection_weight_set": 0.4,
         "add_node": 0.08,
         "remove_node": 0.08,
         "add_connection": 0.2,
