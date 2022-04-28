@@ -14,8 +14,8 @@ from neat import NEAT
 import mattslib as ml
 import mattslib.pygame as mlpg
 
-__version__ = '1.6.6'
-__date__ = '27/04/2022'
+__version__ = '1.6.7'
+__date__ = '29/04/2022'
 
 # Constants
 WIDTH, HEIGHT = 1120, 640
@@ -44,7 +44,7 @@ MODELS_DIR = f"{ENVIRONMENT_DIR}\\models\\"
 
 # Globals - Defaults
 players = [{'type': PLAYER_TYPES[2], 'difficulty': DIFFICULTY[0], 'neat': None},
-           {'type': PLAYER_TYPES[2], 'difficulty': DIFFICULTY[1], 'neat': None}]
+           {'type': PLAYER_TYPES[1], 'difficulty': DIFFICULTY[0], 'neat': None}]
 game_speed = SPEEDS[0]
 show_every = SHOW_EVERY[1]
 colour_theme = COLOUR_THEMES[1]
@@ -81,7 +81,7 @@ def getColourTheme() -> dict:
     return colours
 
 
-def setupAi(player: dict, outputs: int = 1, population: int = 10) -> NEAT:
+def setupAi(player: dict, outputs: int = 1, population: int = 15) -> NEAT:
     """
     Sets up neat with game settings in mind.
     :param player: dict[str: Any]
@@ -168,7 +168,7 @@ def neatMove(genome: Genome, args: Any = None) -> tuple:
     return random.choice(sorted_moves[max_min_keys['max']['value']])
 
 
-def checkBest(player_key: int, total_matches: int = 100, success_rate: float = 0.2) -> None:
+def checkBest(player_key: int, total_matches: int = 80, success_rate: float = 0.2) -> None:
     """
     Update the best neat for each difficulty depending on win rate with current
     trained neat.

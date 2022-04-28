@@ -3,8 +3,8 @@ from __future__ import annotations
 from math import inf
 
 
-__version__ = '1.5.5'
-__date__ = '24/04/2022'
+__version__ = '1.5.6'
+__date__ = '29/04/2022'
 
 
 class Connect4:
@@ -142,11 +142,10 @@ class Connect4:
         # Draw
         return self.DRAW
 
-    def fitnessEvaluation(self, *args: Any, offset: int = 0.5, minimax: bool = True) -> int | dict:
+    def fitnessEvaluation(self, *args: Any, minimax: bool = False) -> int | dict:
         """
         Evaluates the fitness score using surrounding connections or the minimax algorithm.
         :param args: Any
-        :param offset: int
         :param minimax: bool
         :return:
             - fitness - int | dict[tuple: int]
@@ -160,7 +159,7 @@ class Connect4:
                     self.board[possible_move[0]][i] = self.current_player
                     score = self.minimax(possible_move, self.opponent, self.current_player, max_depth=4)
                     self.board[possible_move[0]][i] = self.EMPTY
-                else:
+                elif not minimax:
                     player_score, opponent_score = 0, 0
                     directions = self.getDirectionalSlices(possible_move)
                     player_counts = self.getConnectionCounts(directions, self.current_player, immediate_only=False)
@@ -168,7 +167,11 @@ class Connect4:
                     for direction_pair in player_counts:
                         player_score = max(min(sum(player_counts[direction_pair]) + 1, self.LENGTH), player_score)
                         opponent_score = max(min(sum(opponent_counts[direction_pair]) + 1, self.LENGTH), opponent_score)
-                    score = max(player_score + offset, opponent_score)
+                    score = max(player_score + 0.5, opponent_score)
+                else:
+                    self.board[possible_move[0]][i] = self.current_player
+                    score = self.getBoardStatus(possible_move)
+                    self.board[possible_move[0]][i] = self.EMPTY
                 if score not in raw_fitness:
                     raw_fitness[score] = []
                 raw_fitness[score].append(possible_move)
@@ -184,7 +187,7 @@ class Connect4:
         return fitness
 
     def minimax(self, move: tuple, maxi_piece: int, mini_piece: int, depth: int = 0, maximizing: bool = True,
-                alpha: int = -inf, beta: int = inf, max_depth: int = 0):
+                alpha: int = -inf, beta: int = inf, max_depth: int = None):
         """
         Minimax is a search algorithm that finds a score of minimal possible loss
         for the worst case scenario.
@@ -202,7 +205,7 @@ class Connect4:
         result = self.getBoardStatus(move, maxi_piece)
         score = None
         if result == self.WIN:
-            score = (1 + depth) if maximizing else -(1 + depth)
+            score = 1 if maximizing else -1
         elif result == self.DRAW:
             score = 0
         if score is not None:
@@ -210,7 +213,7 @@ class Connect4:
 
         if maximizing:
             best_score = -inf
-            if max_depth == 0 or depth < max_depth:
+            if max_depth is None or depth < max_depth:
                 for i in range(self.COLUMNS):
                     possible_move = self.getPossibleMove(i)
                     if possible_move[0] != self.INVALID_MOVE:
@@ -223,7 +226,7 @@ class Connect4:
                             break
         else:
             best_score = inf
-            if max_depth == 0 or depth < max_depth:
+            if max_depth is None or depth < max_depth:
                 for i in range(self.COLUMNS):
                     possible_move = self.getPossibleMove(i)
                     if possible_move[0] != self.INVALID_MOVE:
