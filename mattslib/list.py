@@ -1,7 +1,7 @@
 import logging
 
-__version__ = '1.2.2'
-__date__ = '11/04/2022'
+__version__ = '1.2.3'
+__date__ = '1/05/2022'
 
 
 def condense(array: list, condensed_array: list = None, depth: int = 0, max_depth: int = 0) -> list:
@@ -65,3 +65,21 @@ def difference(array_a: list, array_b: list) -> list:
         for i in zip(array_a, array_b):
             differences.append(i[0] - i[1])
     return differences
+
+
+def normalize(array: list = None) -> list:
+    """
+    Normalizes the values using feature scaling to a value
+    between 0 and 1.
+    :param array: list
+    :return:
+        - array - list
+    """
+    max_value, min_value = max(array), min(array)
+    for i, value in enumerate(array):
+        try:
+            array[i] = (value - min_value) / (max_value - min_value)
+        except ZeroDivisionError:
+            array[i] = 0
+    return array
+
