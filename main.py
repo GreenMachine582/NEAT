@@ -32,8 +32,9 @@ overwrite = False
 
 ENVIRONMENT = 'connect4'
 PLAYER_TYPES = ['Human', 'Best', 'Train']
-DIFFICULTY = ['Medium', 'Hard']
-NEAT_INPUTS = {DIFFICULTY[0]: 2, DIFFICULTY[1]: 8}
+DIFFICULTY = ['Easy', 'Medium', 'Hard']
+NEAT_INPUTS = {DIFFICULTY[0]: 2, DIFFICULTY[1]: 8, DIFFICULTY[2]: 42}
+NEAT_OUTPUTS = {DIFFICULTY[0]: 1, DIFFICULTY[1]: 1, DIFFICULTY[2]: 7}
 SPEEDS = [1, 2, 5, 10, 40]
 SHOW_EVERY = ['Genome', 'Generation']
 COLOUR_THEMES = ['Light', 'Dark']
@@ -43,8 +44,8 @@ ENVIRONMENT_DIR = f"{ROOT_DIR}\\{ENVIRONMENT}"
 MODELS_DIR = f"{ENVIRONMENT_DIR}\\models\\"
 
 # Globals - Defaults
-players = [{'type': PLAYER_TYPES[2], 'difficulty': DIFFICULTY[0], 'neat': None},
-           {'type': PLAYER_TYPES[1], 'difficulty': DIFFICULTY[0], 'neat': None}]
+players = [{'type': PLAYER_TYPES[2], 'difficulty': DIFFICULTY[1], 'neat': None},
+           {'type': PLAYER_TYPES[1], 'difficulty': DIFFICULTY[1], 'neat': None}]
 game_speed = SPEEDS[0]
 show_every = SHOW_EVERY[1]
 colour_theme = COLOUR_THEMES[1]
@@ -81,11 +82,10 @@ def getColourTheme() -> dict:
     return colours
 
 
-def setupAi(player: dict, outputs: int = 1, population: int = 15) -> NEAT:
+def setupAi(player: dict, population: int = 15) -> NEAT:
     """
     Sets up neat with game settings in mind.
     :param player: dict[str: Any]
-    :param outputs: int
     :param population: int
     :return:
         - neat - NEAT
@@ -95,8 +95,7 @@ def setupAi(player: dict, outputs: int = 1, population: int = 15) -> NEAT:
         neat = NEAT.load(file)
     else:
         neat = NEAT(ENVIRONMENT_DIR, file_name=f"{player['type']}_{player['difficulty']}")
-        inputs = NEAT_INPUTS[player['difficulty']]
-        neat.generate(inputs, outputs, population=population)
+        neat.generate(NEAT_INPUTS[player['difficulty']], NEAT_OUTPUTS[player['difficulty']], population=population)
         neat.save()
     return neat
 
@@ -138,6 +137,19 @@ def neatMove(genome: Genome, args: Any = None) -> tuple:
         possible_move = c4.getPossibleMove(i)
         if possible_move[0] != c4.INVALID_MOVE:
             possible_moves[possible_move] = 0
+
+    if genome.inputs == NEAT_INPUTS[difficulty[2]]:
+        inputs = []
+        for row in range(c4.ROWS):
+            for piece in c4.board[row]:
+                piece = 0 if piece == c4.current_player else 1 if piece == c4.opponent else piece
+                inputs.append(piece)
+        outputs = genome.forward(ml.list.normalize(inputs))
+        for column in range(len(outputs)):
+            for possible_move in possible_moves:
+                if possible_move[1] == column:
+                    possible_moves[possible_move] = outputs[column]
+
     input_range = {'max': max(c4.ROWS, c4.COLUMNS), 'min': 0}
     for possible_move in possible_moves:
         if genome.inputs == NEAT_INPUTS[difficulty[0]]:
@@ -163,6 +175,7 @@ def neatMove(genome: Genome, args: Any = None) -> tuple:
                     normalized_input = (connection - input_range['min']) / (input_range['max'] - input_range['min'])
                     inputs.append(normalized_input)
             possible_moves[possible_move] += sum(genome.forward(inputs))
+
     sorted_moves = ml.dict.combineByValues(possible_moves)
     max_min_keys = ml.list.findMaxMin(list(sorted_moves.keys()))
     return random.choice(sorted_moves[max_min_keys['max']['value']])
@@ -326,8 +339,9 @@ class Options:
             gbi[f"Player {player_key + 1}:"] = {'selected': players[player_key]['type'], 'options': PLAYER_TYPES}
             self.group_buttons[f"Difficulty {player_key + 1}:"] = mlpg.ButtonGroup(DIFFICULTY,
                                                                                    (self.BOARDER + ((OPTION_WIDTH *
-                                                                                                    (1 / 6)) + 520),
-                                                                                    self.BOARDER + 80 + (player_key * 90)),
+                                                                                                     (1 / 6)) + 520),
+                                                                                    self.BOARDER + 80 +
+                                                                                    (player_key * 90)),
                                                                                    self.colours,
                                                                                    players[player_key]['difficulty'])
 
@@ -533,7 +547,7 @@ def main() -> None:
                 if possible_move is not None:
                     move = connect4.getPossibleMove(possible_move)
             else:  # NEAT Move
-                if not display or frame_count % int(FPS/game_speed) == 0:
+                if not display or frame_count % int(FPS / game_speed) == 0:
                     current_genome = None
                     if show_every == SHOW_EVERY[1] or player['type'] == PLAYER_TYPES[1]:
                         current_genome = player['neat'].best_specie.representative
@@ -571,7 +585,7 @@ def main() -> None:
             if not display:
                 print("NEATs: 1 - %d %d, 2 - %d %d" % (players[0]['neat'].generation, len(players[0]['neat'].species),
                                                        players[1]['neat'].generation, len(players[1]['neat'].species)))
-            if not display or frame_count % int(FPS/game_speed) == 0:
+            if not display or frame_count % int(FPS / game_speed) == 0:
                 reset()
 
         if display:

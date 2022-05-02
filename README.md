@@ -1,4 +1,4 @@
-# NEAT v1.6.5
+# NEAT v1.6.7
 Application of a NEAT (NeuroEvolution of Augmenting Topologies) with a Connect 4 environment.
 
 
